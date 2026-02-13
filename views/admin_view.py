@@ -232,7 +232,12 @@ def render_admin_dashboard():
     }
     
     .stApp { background: var(--bg-base) !important; }
-    header[data-testid="stHeader"] { display: none !important; }
+    
+    /* Header Adjustments - Keep header visible for Sidebar Toggle, but hide clutter */
+    header[data-testid="stHeader"] { background: transparent !important; }
+    div[data-testid="stDecoration"] { display: none; }
+    div[data-testid="stStatusWidget"] { display: none; }
+    button[data-testid="baseButton-headerNoPadding"] { display: none; } /* Specific buttons if needed */
     
     .top-bar {
         display: flex; align-items: center; justify-content: space-between;
@@ -360,6 +365,20 @@ def render_admin_dashboard():
     with c2: st.markdown(f"""<div class="card"><div class="metric-val">{scan_count}</div><div class="metric-lbl">Total Scans</div></div>""", unsafe_allow_html=True)
     with c3: st.markdown(f"""<div class="card" style="border-left:4px solid #30D158;"><div class="metric-val" style="color:#30D158;">{auto_fixed_count}</div><div class="metric-lbl">Auto-Fixed</div></div>""", unsafe_allow_html=True)
     with c4: st.markdown(f"""<div class="card" style="border-left:4px solid #FF453A;"><div class="metric-val" style="color:#FF453A;">{manual_alert_count}</div><div class="metric-lbl">Manual Action</div></div>""", unsafe_allow_html=True)
+
+    with st.expander("ℹ️ About Document Health Score"):
+        st.markdown("""
+        **Health Score Algorithm (Powered by Gemini 1.5 Pro)**
+        
+        The score represents the trustworthiness of your documentation repository. It starts at **100** and is penalized by AI-detected issues:
+        
+        *   **Critical Contradictions (-10 pts)**: Gemini detects conflicts between documents (e.g., "Settings icon is gear" vs "Settings icon is profile").
+        *   **Visual Decay (-5 pts)**: Gemini Vision detects screenshots that no longer match the live product UI.
+        *   **Terminology/Style (-3 pts)**: Inconsistencies with the corporate style guide.
+        *   **Manual Review Required (-10 pts)**: Non-editable files (PDFs) that block auto-fix workflows.
+        
+        *AI acts as the "Gardener", pruning these issues to restore Health to 100.*
+        """)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
