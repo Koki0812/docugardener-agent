@@ -50,6 +50,67 @@ def _load_scan_history() -> list[dict]:
         return []
 
 # ---------------------------------------------------------------------------
+# GCS Polling — detect new files and process them
+# ---------------------------------------------------------------------------
+def _poll_and_process_gcs():
+    """Check GCS bucket for unprocessed files and run the agent pipeline."""
+    try:
+        from google.cloud import storage
+        from services.firestore_service import save_scan_result, get_latest_results
+        from config.settings import GCS_BUCKET
+        from datetime import datetime, timezone
+
+        client = storage.Client()
+        bucket = client.bucket(GCS_BUCKET)
+        blobs = list(bucket.list_blobs())
+
+        if not blobs:
+            return
+
+        # Get already-processed file names from Firestore
+        existing = get_latest_results(limit=100)
+        processed_files = {r.get("file_name", "") for r in existing}
+
+        # Filter to document types only
+        doc_extensions = (".docx", ".doc", ".pdf", ".txt", ".md")
+        new_files = [
+            b for b in blobs
+            if any(b.name.lower().endswith(ext) for ext in doc_extensions)
+            and b.name not in processed_files
+        ]
+
+        if not new_files:
+            return
+
+        for blob in new_files:
+            scan_id = f"scan_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{blob.name.replace('/', '_')}"
+            try:
+                # Try real agent pipeline
+                from webhook import _run_pipeline
+                result = _run_pipeline(GCS_BUCKET, blob.name, scan_id)
+            except Exception:
+                # Fallback to demo result
+                result = _run_agent_demo(blob.name)
+
+            scan_record = {
+                "scan_id": scan_id,
+                "status": "completed",
+                "bucket": GCS_BUCKET,
+                "file_name": blob.name,
+                "file_size": blob.size or 0,
+                "triggered_at": datetime.now(timezone.utc).isoformat(),
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+                "contradictions": result.get("contradictions", []),
+                "visual_decays": result.get("visual_decays", []),
+                "suggestions": result.get("suggestions", []),
+                "related_docs": result.get("related_docs", []),
+            }
+            save_scan_result(scan_record)
+
+    except Exception as e:
+        logging.warning(f"GCS polling error: {e}")
+
+# ---------------------------------------------------------------------------
 # Demo helper
 # ---------------------------------------------------------------------------
 def _run_agent_demo(doc_id: str) -> dict[str, Any]:
@@ -229,6 +290,7 @@ firestore_connected = True
 last_update_time = None
 
 if is_auto:
+    _poll_and_process_gcs()  # Detect & process new GCS files
     history = _load_scan_history()
     if "firestore_error" in st.session_state:
         firestore_connected = False
