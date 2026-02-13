@@ -405,7 +405,7 @@ def render_admin_dashboard():
     manual_alert_count = len(manual_alert_items)
     total_issues = sum(len(x.get("contradictions", [])) + len(x.get("visual_decays", [])) for x in history)
     
-    health_score = calculate_health(total_issues, manual_alert_count)
+    health_score = calculate_health(history, st.session_state.review_status)
     health_color = "#30D158" if health_score >= 80 else "#FF9F0A" if health_score >= 50 else "#FF453A"
 
     # Top Bar
