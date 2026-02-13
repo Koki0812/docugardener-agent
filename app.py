@@ -116,36 +116,88 @@ def _poll_and_process_gcs():
 # ---------------------------------------------------------------------------
 def _run_agent_demo(doc_id: str) -> dict[str, Any]:
     time.sleep(1.5)
+    
+    # SCENARIO 1: Operations Manual (Text + Visual)
+    if "Operations_Manual" in doc_id:
+        return {
+            "contradictions": [
+                {
+                    "severity": "critical", "category": "Facts",
+                    "old_doc": "Operations Manual v2.1",
+                    "message": "Top-right gear icon (⚙) is no longer used for Settings.",
+                    "suggestion": "Access Settings via the new Side Menu (bottom-left).",
+                }
+            ],
+            "visual_decays": [
+                {
+                    "severity": "info", "category": "UI Freshness",
+                    "old_doc": "Operations Manual v2.1",
+                    "description": "Login screen screenshot is outdated (v2.0 Blue theme)",
+                    "suggestion": "https://storage.googleapis.com/docugardener-public/v3-login-screen.png",
+                    "type": "image_replacement"
+                },
+            ],
+            "suggestions_count": 2,
+            "related_docs": [{"title": "UI Specs v3.0", "doc_id": "ctx_1"}]
+        }
+
+    # SCENARIO 2: New Hire Guide (Terminology)
+    elif "New_Hire_Guide" in doc_id:
+        return {
+            "contradictions": [
+                {
+                    "severity": "warning", "category": "Terminology",
+                    "old_doc": "New Hire Guide 2024",
+                    "message": "Term mismatch: 'Dashboard' is deprecated.",
+                    "suggestion": "Replace 'Dashboard' with 'Home Screen' throughout the document.",
+                },
+                {
+                    "severity": "info", "category": "Style",
+                    "old_doc": "New Hire Guide 2024",
+                    "message": "Phrasing: 'Log in to portal' is ambiguous.",
+                    "suggestion": "Use 'Sign in to Corporate Portal' for consistency.",
+                }
+            ],
+            "visual_decays": [],
+            "suggestions_count": 2,
+            "related_docs": [{"title": "Terminology Guide 2025", "doc_id": "ctx_2"}]
+        }
+
+    # SCENARIO 3: Legacy PDF (Manual Action)
+    elif "Legacy_Product_Spec" in doc_id or doc_id.endswith(".pdf"):
+        return {
+            "contradictions": [
+                {
+                    "severity": "critical", "category": "Format",
+                    "old_doc": doc_id,
+                    "message": "File format is PDF (Non-editable).",
+                    "suggestion": "Please convert to .docx for auto-fixing.",
+                },
+                {
+                    "severity": "warning", "category": "Version",
+                    "old_doc": doc_id,
+                    "message": "Content conflicts with 'Product Specs v3.0'.",
+                    "suggestion": "Manual review required to resolve version conflict.",
+                }
+            ],
+            "visual_decays": [],
+            "suggestions_count": 2,
+            "related_docs": [{"title": "Product Specs v3.0", "doc_id": "ctx_3"}]
+        }
+
+    # Default / Fallback
     return {
         "contradictions": [
             {
-                "severity": "critical", "category": "Facts",
-                "old_doc": "Operations Manual v2.1",
-                "message": "Outdated instruction: 'Gear icon' vs 'Side menu'",
-                "suggestion": "Update Sec.3 to reflect new navigation",
-            },
-            {
-                "severity": "warning", "category": "Terminology",
-                "old_doc": "New Hire Guide 2024",
-                "message": "Term mismatch: 'Dashboard' vs 'Home'",
-                "suggestion": "Standardize to 'Home Screen'",
-            },
+                "severity": "info", "category": "General",
+                "old_doc": doc_id,
+                "message": "Potential style inconsistency detected.",
+                "suggestion": "Review against style guide.",
+            }
         ],
-        "visual_decays": [
-            {
-                "severity": "info", "category": "UI Freshness",
-                "old_doc": "Operations Manual v2.1",
-                "description": "Login screen screenshot is outdated (v2.0 design)",
-                "suggestion": "https://storage.googleapis.com/docugardener-public/v3-login-screen.png", # Placeholder URL
-                "type": "image_replacement"
-            },
-        ],
-        "suggestions_count": 3,
-        "related_docs": [
-            {"title": "Operations Manual v2.1", "doc_id": "demo_1"},
-            {"title": "New Hire Guide 2024", "doc_id": "demo_2"},
-            {"title": "IT FAQ", "doc_id": "demo_3"},
-        ],
+        "visual_decays": [],
+        "suggestions_count": 1,
+        "related_docs": []
     }
 
 # ---------------------------------------------------------------------------
