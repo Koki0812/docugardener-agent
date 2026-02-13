@@ -94,14 +94,28 @@ def _run_agent_demo(doc_id: str) -> dict[str, Any]:
     return {
         "contradictions": [
             {
-                "severity": "info", "category": "General",
+                "severity": "warning", "category": "用語統一",
                 "old_doc": doc_id,
-                "message": "Potential style inconsistency detected.",
-                "suggestion": "Review against style guide.",
+                "message": "「ユーザー」と「ユーザ」が混在しています。",
+                "suggestion": "「ユーザー」に統一してください。",
+            },
+            {
+                "severity": "info", "category": "住所変更",
+                "old_doc": doc_id,
+                "message": "旧住所：東京都港区六本木 1-2-3",
+                "suggestion": "新住所：東京都渋谷区渋谷 4-5-6",
             }
         ],
-        "visual_decays": [],
-        "suggestions_count": 1,
+        "visual_decays": [
+             {
+                "severity": "info", "category": "UI更新",
+                "old_doc": doc_id,
+                "description": "ログイン画面のキャプチャが古いです (ボタンが四角い)",
+                "suggestion": "https://storage.googleapis.com/docugardener-public/v3-login-screen.png",
+                "type": "image_replacement"
+            }
+        ],
+        "suggestions_count": 3,
         "related_docs": []
     }
 
@@ -109,6 +123,23 @@ def _run_agent_demo(doc_id: str) -> dict[str, Any]:
 # GCS Polling
 # ---------------------------------------------------------------------------
 def _poll_and_process_gcs():
+# ... (omitted) ...
+
+# ... (inside render_admin_dashboard function) ...
+
+    with st.expander("ℹ️ ドキュメント健全性スコアについて"):
+        st.markdown("""
+        **健全性スコア (Gemini 1.5 Pro 分析)**
+        
+        ドキュメントリポジトリの「信頼度」を 100点満点で評価します。AIが検出した問題に応じて減点されます：
+        
+        *   **重大な事実矛盾 (-10点)**: ドキュメント間で記述が食い違っている場合 (例: 仕様書AとBでアイコンの記述が異なる)。
+        *   **視覚的陳腐化 (-5点)**: スクリーンショットが現在の実際の製品UIと一致しない場合 (Gemini Visionによる判定)。
+        *   **用語・スタイルの不統一 (-3点)**: 社内スタイルガイドとの不整合。
+        *   **要手動レビュー (-10点)**: PDFなど、自動修正フローに乗せられないファイル。
+        
+        *AIは「庭師」としてこれらの問題を剪定し、常に健全性を100に保つよう支援します。*
+        """)
     """Check GCS bucket for unprocessed files and run the agent pipeline."""
     try:
         from google.cloud import storage
