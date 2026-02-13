@@ -11,6 +11,7 @@ google-auth>=2.25.0
 google-auth-oauthlib>=1.2.0
 google-cloud-discoveryengine>=0.11.0
 google-cloud-firestore>=2.14.0
+google-cloud-storage>=2.13.0
 
 # Webhook
 flask>=3.0.0
