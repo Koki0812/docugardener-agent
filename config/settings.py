@@ -1,0 +1,27 @@
+"""Centralized configuration for DocuGardener Agent."""
+import os
+
+
+# Google Cloud
+GCP_PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "")
+GCP_LOCATION = os.environ.get("GCP_LOCATION", "asia-northeast1")
+
+# Vertex AI
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-1.5-pro")
+
+# Vertex AI Agent Builder (Discovery Engine)
+SEARCH_ENGINE_ID = os.environ.get("SEARCH_ENGINE_ID", "")
+SEARCH_DATA_STORE_ID = os.environ.get("SEARCH_DATA_STORE_ID", "")
+
+# Google Drive
+DRIVE_FOLDER_ID = os.environ.get("DRIVE_FOLDER_ID", "")
+
+# GCS (for Eventarc trigger)
+GCS_BUCKET = os.environ.get("GCS_BUCKET", "docugardener-hackathon-2026-docs")
+
+# Firestore
+FIRESTORE_COLLECTION = os.environ.get("FIRESTORE_COLLECTION", "scan_results")
+
+# App
+APP_TITLE = "🌿 DocuGardener Agent"
+APP_DESCRIPTION = "検索されるのを待たない。自ら動き、知識の森を「剪定」する自律型庭師AI"

@@ -1,0 +1,5 @@
+[PNG IMAGE FILE]
+Filename: old_dashboard_screenshot.png
+Content: Screenshot of outdated dashboard UI (v2.0)
+Issue: Current version is v3.0 with different layout
+Action Required: Retake screenshot with v3.0 UI

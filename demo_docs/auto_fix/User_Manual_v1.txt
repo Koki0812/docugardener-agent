@@ -1,0 +1,7 @@
+User Manual v1.0
+Last Updated: 2024-07-01
+
+## Chat Feature
+
+Group chat can be created with up to 5 members maximum.
+For larger groups, please use mailing lists instead.

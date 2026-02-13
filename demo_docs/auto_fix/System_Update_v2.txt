@@ -1,0 +1,7 @@
+System Update v2.0
+Release Date: 2025-01-15
+
+## Chat Feature Enhancement
+
+Group chat member limit has been removed.
+You can now create unlimited group chats with any number of members.

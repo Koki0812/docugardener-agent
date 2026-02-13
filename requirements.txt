@@ -1,0 +1,21 @@
+# Core
+streamlit>=1.31.0
+langgraph>=0.0.40
+langchain-core>=0.1.20
+langchain-google-vertexai>=0.0.6
+
+# Google Cloud
+google-cloud-aiplatform>=1.40.0
+google-api-python-client>=2.100.0
+google-auth>=2.25.0
+google-auth-oauthlib>=1.2.0
+google-cloud-discoveryengine>=0.11.0
+google-cloud-firestore>=2.14.0
+
+# Webhook
+flask>=3.0.0
+
+# Utilities
+Pillow>=10.0.0
+requests>=2.31.0
+python-dotenv>=1.0.0
