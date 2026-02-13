@@ -33,6 +33,7 @@ for key, default in [
     ("run_count", 0),
     ("scan_history", []),
     ("last_refresh", None),
+    ("review_status", {}),    # {scan_id: "approved" | "denied"}
 ]:
     if key not in st.session_state:
         st.session_state[key] = default
@@ -259,6 +260,23 @@ header[data-testid="stHeader"] { display: none !important; }
 }
 .alert-badge { background: var(--danger); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; display: inline-block; margin-bottom: 8px; }
 
+/* Diff Preview */
+.diff-container {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    margin: 12px 0;
+}
+.diff-panel {
+    background: #FAFAFA; border-radius: 8px; padding: 16px;
+    border: 1px solid #E5E5EA; font-size: 0.85rem; line-height: 1.6;
+}
+.diff-panel-old { border-left: 4px solid #FF453A; }
+.diff-panel-new { border-left: 4px solid #30D158; }
+.diff-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; display: block; }
+.diff-del { background: #FFE5E5; color: #D92D20; padding: 2px 4px; border-radius: 3px; text-decoration: line-through; }
+.diff-add { background: #E5FFE9; color: #1a8f3b; padding: 2px 4px; border-radius: 3px; }
+.review-badge-approved { background: #30D158; color: white; padding: 4px 12px; border-radius: 32px; font-size: 0.75rem; font-weight: 700; display: inline-block; }
+.review-badge-denied { background: #FF453A; color: white; padding: 4px 12px; border-radius: 32px; font-size: 0.75rem; font-weight: 700; display: inline-block; }
+
 /* Activity Feed */
 .feed-item {
     display: flex; justify-content: space-between; align-items: center;
@@ -406,22 +424,87 @@ col_left, col_right = st.columns([3, 2])
 
 with col_left:
     st.subheader("Auto-Fixed Documents")
-    st.caption("These editable files (.docx, .txt) have been automatically corrected by the agent.")
+    st.caption("Click a document to review the changes. Approve or deny each auto-fix.")
     
     if not auto_fixed_items:
         st.info("No auto-fixed documents yet. Upload .docx or .txt files to GCS.")
     else:
-        for item in auto_fixed_items[:5]:
+        for idx, item in enumerate(auto_fixed_items[:5]):
             fname = item.get("file_name", "Unknown")
-            n_issues = len(item.get("contradictions", [])) + len(item.get("visual_decays", []))
+            scan_id = item.get("scan_id", item.get("id", f"item_{idx}"))
+            contradictions = item.get("contradictions", [])
+            visual_decays = item.get("visual_decays", [])
+            n_issues = len(contradictions) + len(visual_decays)
+            review = st.session_state.review_status.get(scan_id, None)
             
-            st.markdown(f"""
-            <div class="result-card">
-                <span class="rc-tag" style="color:#30D158;">✓ AUTO-FIXED</span>
-                <div class="rc-title">{fname}</div>
-                <div class="rc-desc">{n_issues} issues detected and automatically corrected</div>
-            </div>
-            """, unsafe_allow_html=True)
+            # Review status badge
+            if review == "approved":
+                badge = '<span class="review-badge-approved">✓ HUMAN REVIEWED</span>'
+            elif review == "denied":
+                badge = '<span class="review-badge-denied">✕ REVERTED</span>'
+            else:
+                badge = '<span class="rc-tag" style="color:#30D158;">✓ AUTO-FIXED — Click to review</span>'
+            
+            with st.expander(f"📄 {fname} — {n_issues} issue(s)", expanded=False):
+                st.markdown(badge, unsafe_allow_html=True)
+                
+                if review == "approved":
+                    st.success("This fix has been reviewed and approved by a human reviewer.")
+                elif review == "denied":
+                    st.warning("This auto-fix was denied. The document has been reverted to its original version.")
+                
+                # Show diff for each contradiction
+                for c_idx, c in enumerate(contradictions):
+                    old_text = c.get("message", c.get("analysis", "Original content"))
+                    suggestion = c.get("suggestion", "Corrected content")
+                    category = c.get("category", c.get("severity", "Change"))
+                    old_doc = c.get("old_doc", c.get("doc_title", ""))
+                    
+                    st.markdown(f"**Issue {c_idx+1}: {category}**" + (f" — _{old_doc}_" if old_doc else ""))
+                    st.markdown(f"""
+                    <div class="diff-container">
+                        <div class="diff-panel diff-panel-old">
+                            <span class="diff-label" style="color:#FF453A;">❌ Before (Original)</span>
+                            <div><span class="diff-del">{old_text}</span></div>
+                        </div>
+                        <div class="diff-panel diff-panel-new">
+                            <span class="diff-label" style="color:#30D158;">✅ After (Auto-Fixed)</span>
+                            <div><span class="diff-add">{suggestion}</span></div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # Show visual decay fixes
+                for v_idx, v in enumerate(visual_decays):
+                    desc = v.get("description", v.get("analysis", "Visual issue"))
+                    sug = v.get("suggestion", "Updated")
+                    
+                    st.markdown(f"**Visual Fix {v_idx+1}: UI Freshness**")
+                    st.markdown(f"""
+                    <div class="diff-container">
+                        <div class="diff-panel diff-panel-old">
+                            <span class="diff-label" style="color:#FF453A;">❌ Before</span>
+                            <div><span class="diff-del">{desc}</span></div>
+                        </div>
+                        <div class="diff-panel diff-panel-new">
+                            <span class="diff-label" style="color:#30D158;">✅ After</span>
+                            <div><span class="diff-add">{sug}</span></div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # Approve / Deny buttons
+                if review is None:
+                    st.markdown("---")
+                    btn_col1, btn_col2, btn_col3 = st.columns([1, 1, 2])
+                    with btn_col1:
+                        if st.button("✅ Approve", key=f"approve_{scan_id}", type="primary"):
+                            st.session_state.review_status[scan_id] = "approved"
+                            st.rerun()
+                    with btn_col2:
+                        if st.button("❌ Deny & Revert", key=f"deny_{scan_id}"):
+                            st.session_state.review_status[scan_id] = "denied"
+                            st.rerun()
 
 with col_right:
     st.subheader("⚠ Manual Action Required")
