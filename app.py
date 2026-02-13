@@ -343,7 +343,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 col_left, col_right = st.columns([3, 2])
 
 with col_left:
-    st.subheader("Auto-Fixed Documents (修正済み)")
+    st.subheader("Auto-Fixed Documents")
     st.caption("These editable files (.docx, .txt) have been automatically corrected by the agent.")
     
     if not auto_fixed_items:
