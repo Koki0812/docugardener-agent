@@ -265,6 +265,28 @@ Action Required: Retake screenshot with v3.0 UI
     path.write_text(content, encoding='utf-8')
     print(f"[OK] {path} (Image placeholder)")
 
+
+def create_b5_legacy_pdf():
+    """B-5: レガシーPDF保存 - docxで代用"""
+    # legacy サブディレクトリを作成
+    legacy_dir = MANUAL_DIR / "legacy"
+    legacy_dir.mkdir(exist_ok=True)
+    
+    doc = Document()
+    doc.add_heading("Operations Manual 2023 (Legacy PDF)", level=0)
+    _add_para(doc, "This is an archived PDF from 2023.")
+    _add_para(doc, "⚠ WARNING: This document is outdated and should not be referenced.")
+    doc.add_paragraph()
+    
+    doc.add_heading("Legacy Content", level=1)
+    _add_para(doc, "Old contact: IT Helpdesk ext. 5678 (now deprecated)")
+    _add_para(doc, "Old process: Submit ticket via email (now uses web portal)")
+    
+    path = legacy_dir / "Manual_2023.pdf.docx"
+    doc.save(str(path))
+    print(f"[OK] {path} (Legacy PDF placeholder)")
+
+
 # ============================================================================
 # Main
 # ============================================================================
@@ -292,8 +314,14 @@ if __name__ == "__main__":
     create_b2_quick_start_pdf()
     create_b3_company_policy_pdf()
     create_b4_screenshot_png()
+    create_b5_legacy_pdf()
     
     print("\n>> Complete! Test documents created:")
     print(f"   Auto-Fix: {len(list(AUTO_FIX_DIR.glob('*')))} files")
-    print(f"   Manual:   {len(list(MANUAL_DIR.glob('*')))} files")
-    print(f"\n   Total: {len(list(AUTO_FIX_DIR.glob('*'))) + len(list(MANUAL_DIR.glob('*')))} test scenario files")
+    print(f"   Manual:   {len(list(MANUAL_DIR.glob('*')))} files (including legacy/)")
+    
+    # Count legacy files separately
+    legacy_count = len(list((MANUAL_DIR / "legacy").glob('*'))) if (MANUAL_DIR / "legacy").exists() else 0
+    total_manual = len(list(MANUAL_DIR.glob('*'))) + legacy_count
+    
+    print(f"\n   Total: {len(list(AUTO_FIX_DIR.glob('*')))} auto-fix + {total_manual} manual = {len(list(AUTO_FIX_DIR.glob('*'))) + total_manual} test scenario files")
