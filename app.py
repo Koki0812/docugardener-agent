@@ -135,8 +135,9 @@ def _run_agent_demo(doc_id: str) -> dict[str, Any]:
             {
                 "severity": "info", "category": "UI Freshness",
                 "old_doc": "Operations Manual v2.1",
-                "description": "Login screen screenshot is outdated",
-                "suggestion": "Replace with current v3.0 screenshot",
+                "description": "Login screen screenshot is outdated (v2.0 design)",
+                "suggestion": "https://storage.googleapis.com/docugardener-public/v3-login-screen.png", # Placeholder URL
+                "type": "image_replacement"
             },
         ],
         "suggestions_count": 3,
@@ -272,8 +273,12 @@ header[data-testid="stHeader"] { display: none !important; }
 .diff-panel-old { border-left: 4px solid #FF453A; }
 .diff-panel-new { border-left: 4px solid #30D158; }
 .diff-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; display: block; }
-.diff-del { background: #FFE5E5; color: #D92D20; padding: 2px 4px; border-radius: 3px; text-decoration: line-through; }
+.diff-del { background: #FFE5E5; color: #D92D20; padding: 2px 4px; border-radius: 3px; } /* Removed strikethrough */
 .diff-add { background: #E5FFE9; color: #1a8f3b; padding: 2px 4px; border-radius: 3px; }
+.review-btn-row { display: flex; gap: 8px; margin-top: 8px; }
+.status-icon-pending { color: #86868B; font-weight: bold; }
+.status-icon-approved { color: #30D158; font-weight: bold; }
+.status-icon-denied { color: #FF453A; font-weight: bold; }
 .review-badge-approved { background: #30D158; color: white; padding: 4px 12px; border-radius: 32px; font-size: 0.75rem; font-weight: 700; display: inline-block; }
 .review-badge-denied { background: #FF453A; color: white; padding: 4px 12px; border-radius: 32px; font-size: 0.75rem; font-weight: 700; display: inline-block; }
 
@@ -424,7 +429,7 @@ col_left, col_right = st.columns([3, 2])
 
 with col_left:
     st.subheader("Auto-Fixed Documents")
-    st.caption("Click a document to review the changes. Approve or deny each auto-fix.")
+    st.caption("Expand documents to review changes issue-by-issue.")
     
     if not auto_fixed_items:
         st.info("No auto-fixed documents yet. Upload .docx or .txt files to GCS.")
@@ -432,79 +437,119 @@ with col_left:
         for idx, item in enumerate(auto_fixed_items[:5]):
             fname = item.get("file_name", "Unknown")
             scan_id = item.get("scan_id", item.get("id", f"item_{idx}"))
+            
+            # Combine all issues
             contradictions = item.get("contradictions", [])
             visual_decays = item.get("visual_decays", [])
-            n_issues = len(contradictions) + len(visual_decays)
-            review = st.session_state.review_status.get(scan_id, None)
+            all_issues = []
             
-            # Review status badge
-            if review == "approved":
-                badge = '<span class="review-badge-approved">✓ HUMAN REVIEWED</span>'
-            elif review == "denied":
-                badge = '<span class="review-badge-denied">✕ REVERTED</span>'
+            for c in contradictions:
+                all_issues.append({
+                    "type": "text", 
+                    "category": c.get("category", "Text Fix"),
+                    "old": c.get("message", "Original"), 
+                    "new": c.get("suggestion", "Corrected"),
+                    "doc": c.get("old_doc", "")
+                })
+            
+            for v in visual_decays:
+                all_issues.append({
+                    "type": "image" if "png" in v.get("suggestion", "") or "jpg" in v.get("suggestion", "") else "text",
+                    "category": v.get("category", "Visual Fix"),
+                    "old": v.get("description", "Old Image"),
+                    "new": v.get("suggestion", "New Image"),
+                    "doc": v.get("old_doc", "")
+                })
+                
+            n_issues = len(all_issues)
+            
+            # Calculate file-level status
+            approved_count = 0
+            denied_count = 0
+            
+            for i in range(n_issues):
+                issue_key = f"{scan_id}_issue_{i}"
+                status = st.session_state.review_status.get(issue_key, None)
+                if status == "approved": approved_count += 1
+                if status == "denied": denied_count += 1
+            
+            if approved_count + denied_count == 0:
+                file_status_icon = "⚪" # Unreviewed
+                file_status_text = "Pending Review"
+            elif approved_count + denied_count == n_issues:
+                if denied_count > 0:
+                    file_status_icon = "🔴" 
+                    file_status_text = "Review Completed (Some Denied)"
+                else:
+                    file_status_icon = "🟢"
+                    file_status_text = "Fully Approved"
             else:
-                badge = '<span class="rc-tag" style="color:#30D158;">✓ AUTO-FIXED — Click to review</span>'
+                file_status_icon = "🟡"
+                file_status_text = f"In Progress ({approved_count + denied_count}/{n_issues})"
             
-            with st.expander(f"📄 {fname} — {n_issues} issue(s)", expanded=False):
-                st.markdown(badge, unsafe_allow_html=True)
-                
-                if review == "approved":
-                    st.success("This fix has been reviewed and approved by a human reviewer.")
-                elif review == "denied":
-                    st.warning("This auto-fix was denied. The document has been reverted to its original version.")
-                
-                # Show diff for each contradiction
-                for c_idx, c in enumerate(contradictions):
-                    old_text = c.get("message", c.get("analysis", "Original content"))
-                    suggestion = c.get("suggestion", "Corrected content")
-                    category = c.get("category", c.get("severity", "Change"))
-                    old_doc = c.get("old_doc", c.get("doc_title", ""))
+            with st.expander(f"{file_status_icon} {fname} — {file_status_text}", expanded=False):
+                st.markdown(f"<div style='margin-bottom:12px; font-size:0.9rem; color:#666;'>Found {n_issues} issues. Please review each one:</div>", unsafe_allow_html=True)
+
+                for i, issue in enumerate(all_issues):
+                    issue_key = f"{scan_id}_issue_{i}"
+                    status = st.session_state.review_status.get(issue_key, None)
                     
-                    st.markdown(f"**Issue {c_idx+1}: {category}**" + (f" — _{old_doc}_" if old_doc else ""))
+                    # Status header for the issue
+                    if status == "approved":
+                        status_html = '<span class="status-icon-approved">✅ APPROVED</span>'
+                        bg_style = "border: 1px solid #30D158; background: #F0FFF4;"
+                    elif status == "denied":
+                        status_html = '<span class="status-icon-denied">❌ DENIED (Reverted)</span>'
+                        bg_style = "border: 1px solid #FF453A; background: #FFF0F0;"
+                    else:
+                        status_html = '<span class="status-icon-pending">⏳ PENDING</span>'
+                        bg_style = "border: 1px solid #EEE;"
+
                     st.markdown(f"""
-                    <div class="diff-container">
-                        <div class="diff-panel diff-panel-old">
-                            <span class="diff-label" style="color:#FF453A;">❌ Before (Original)</span>
-                            <div><span class="diff-del">{old_text}</span></div>
+                    <div style="{bg_style} border-radius:8px; padding:12px; margin-bottom:12px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                            <span style="font-weight:bold; font-size:0.85rem;">Issue {i+1}: {issue['category']}</span>
+                            {status_html}
                         </div>
-                        <div class="diff-panel diff-panel-new">
-                            <span class="diff-label" style="color:#30D158;">✅ After (Auto-Fixed)</span>
-                            <div><span class="diff-add">{suggestion}</span></div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Content Diff
+                    old_content = f'<span class="diff-del">{issue["old"]}</span>'
+                    
+                    if issue['type'] == 'image':
+                        # If it's an image URL
+                        new_content = f'<div style="color:#30D158; font-weight:bold; margin-bottom:4px;">✅ Replaced with:</div><img src="{issue["new"]}" width="100%" style="border-radius:4px; border:2px solid #30D158;">'
+                        if "http" not in issue["new"]: # Fallback if not a real URL
+                             new_content = f'<span class="diff-add">🖼️ Image Replacement: {issue["new"]}</span>'
+                    else:
+                        new_content = f'<span class="diff-add">{issue["new"]}</span>'
+
+                    st.markdown(f"""
+                        <div class="diff-container" style="margin:0;">
+                            <div class="diff-panel diff-panel-old">
+                                <span class="diff-label" style="color:#FF453A;">Before</span>
+                                <div>{old_content}</div>
+                            </div>
+                            <div class="diff-panel diff-panel-new">
+                                <span class="diff-label" style="color:#30D158;">After</span>
+                                <div>{new_content}</div>
+                            </div>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
-                
-                # Show visual decay fixes
-                for v_idx, v in enumerate(visual_decays):
-                    desc = v.get("description", v.get("analysis", "Visual issue"))
-                    sug = v.get("suggestion", "Updated")
                     
-                    st.markdown(f"**Visual Fix {v_idx+1}: UI Freshness**")
-                    st.markdown(f"""
-                    <div class="diff-container">
-                        <div class="diff-panel diff-panel-old">
-                            <span class="diff-label" style="color:#FF453A;">❌ Before</span>
-                            <div><span class="diff-del">{desc}</span></div>
-                        </div>
-                        <div class="diff-panel diff-panel-new">
-                            <span class="diff-label" style="color:#30D158;">✅ After</span>
-                            <div><span class="diff-add">{sug}</span></div>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                # Approve / Deny buttons
-                if review is None:
+                    # Buttons (only show if pending or to allow changing mind)
+                    b_col1, b_col2, b_skip = st.columns([1, 1, 3])
+                    with b_col1:
+                        if st.button("Approve", key=f"app_{issue_key}", type="primary" if status is None else "secondary", use_container_width=True):
+                            st.session_state.review_status[issue_key] = "approved"
+                            st.rerun()
+                    with b_col2:
+                         if st.button("Deny", key=f"den_{issue_key}", use_container_width=True):
+                            st.session_state.review_status[issue_key] = "denied"
+                            st.rerun()
+                    
                     st.markdown("---")
-                    btn_col1, btn_col2, btn_col3 = st.columns([1, 1, 2])
-                    with btn_col1:
-                        if st.button("✅ Approve", key=f"approve_{scan_id}", type="primary"):
-                            st.session_state.review_status[scan_id] = "approved"
-                            st.rerun()
-                    with btn_col2:
-                        if st.button("❌ Deny & Revert", key=f"deny_{scan_id}"):
-                            st.session_state.review_status[scan_id] = "denied"
-                            st.rerun()
 
 with col_right:
     st.subheader("⚠ Manual Action Required")
