@@ -23,5 +23,5 @@ GCS_BUCKET = os.environ.get("GCS_BUCKET", "hackathon4-487208-docs")
 FIRESTORE_COLLECTION = os.environ.get("FIRESTORE_COLLECTION", "scan_results")
 
 # App
-APP_TITLE = "🌿 DocuGardener Agent"
-APP_DESCRIPTION = "検索されるのを待たない。自ら動き、知識の森を「剪定」する自律型庭師AI"
+APP_TITLE = "🛡️ DocuAlign AI"
+APP_DESCRIPTION = "ドキュメントの矛盾・劣化を自動検知し、常に最新・正確な状態に保つ自律型管理エージェント"

@@ -217,8 +217,25 @@ def categorize_scan(scan_item):
 
 def calculate_health(total, alerts):
     base_score = 100
-    deduction = (total * 3) + (alerts * 10)
+    # Adjusted weights to prevent score from hitting 0 too easily
+    deduction = (total * 1) + (alerts * 5)
     return max(0, base_score - deduction)
+
+# ... (omitted) ...
+
+    with st.expander("ℹ️ ドキュメント健全性スコアについて"):
+        st.markdown("""
+        **健全性スコア (Gemini 1.5 Pro 分析)**
+        
+        直近のスキャン結果（最大20件）に基づき、リポジトリの「信頼度」を 100点満点で評価します。
+        
+        *   **重大な事実矛盾 (-2点)**: ドキュメント間で記述が食い違っている場合。
+        *   **視覚的陳腐化 (-1点)**: UI画像が古い場合。
+        *   **用語・スタイルの不統一 (-1点)**: スタイルガイドとの不整合。
+        *   **要手動レビュー (-5点)**: 自動処理できないファイル (PDF等)。
+        
+        ※ 現在はデモ用に、全スキャン履歴から算出しています。
+        """)
 
 # ---------------------------------------------------------------------------
 # Main Render Function
@@ -371,13 +388,13 @@ def render_admin_dashboard():
 
     # Top Bar
     conn_status_html = f'<span class="conn-ok">● Firestore Connected</span>' if firestore_connected else f'<span class="conn-err">● Firestore Error</span>'
-    last_update_html = f'<span style="margin-left:16px;">Last Update: {last_update_time[:16] if last_update_time else "N/A"}</span>' if last_update_time else ''
+    last_update_html = f'<span style="margin-left:16px;">最終更新: {last_update_time[:16] if last_update_time else "N/A"}</span>' if last_update_time else ''
     
     st.markdown(f"""
     <div class="top-bar">
         <div class="logo-area">
             <div class="geo-icon"></div>
-            <div class="app-name">DocuGardener</div>
+            <div class="app-name">DocuAlign AI</div>
         </div>
         <div style="display:flex; align-items:center; gap:16px;">
             <div class="conn-info">{conn_status_html}{last_update_html}</div>
@@ -392,10 +409,10 @@ def render_admin_dashboard():
     # Metrics
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.markdown(f"""<div class="card"><div class="metric-lbl">Document Health</div><div class="health-score" style="color:{health_color}">{health_score}</div><div class="health-gauge"><div class="health-fill" style="width:{health_score}%; background:{health_color};"></div></div></div>""", unsafe_allow_html=True)
-    with c2: st.markdown(f"""<div class="card"><div class="metric-val">{scan_count}</div><div class="metric-lbl">Total Scans</div></div>""", unsafe_allow_html=True)
-    with c3: st.markdown(f"""<div class="card" style="border-left:4px solid #30D158;"><div class="metric-val" style="color:#30D158;">{auto_fixed_count}</div><div class="metric-lbl">Auto-Fixed</div></div>""", unsafe_allow_html=True)
-    with c4: st.markdown(f"""<div class="card" style="border-left:4px solid #FF453A;"><div class="metric-val" style="color:#FF453A;">{manual_alert_count}</div><div class="metric-lbl">Manual Action</div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div class="card"><div class="metric-lbl">ドキュメント健全性</div><div class="health-score" style="color:{health_color}">{health_score}</div><div class="health-gauge"><div class="health-fill" style="width:{health_score}%; background:{health_color};"></div></div></div>""", unsafe_allow_html=True)
+    with c2: st.markdown(f"""<div class="card"><div class="metric-val">{scan_count}</div><div class="metric-lbl">スキャン総数</div></div>""", unsafe_allow_html=True)
+    with c3: st.markdown(f"""<div class="card" style="border-left:4px solid #30D158;"><div class="metric-val" style="color:#30D158;">{auto_fixed_count}</div><div class="metric-lbl">自動修正 (Auto-Fix)</div></div>""", unsafe_allow_html=True)
+    with c4: st.markdown(f"""<div class="card" style="border-left:4px solid #FF453A;"><div class="metric-val" style="color:#FF453A;">{manual_alert_count}</div><div class="metric-lbl">要手動対応</div></div>""", unsafe_allow_html=True)
 
     with st.expander("ℹ️ About Document Health Score"):
         st.markdown("""
