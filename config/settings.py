@@ -17,7 +17,7 @@ SEARCH_DATA_STORE_ID = os.environ.get("SEARCH_DATA_STORE_ID", "")
 DRIVE_FOLDER_ID = os.environ.get("DRIVE_FOLDER_ID", "")
 
 # GCS (for Eventarc trigger)
-GCS_BUCKET = os.environ.get("GCS_BUCKET", "docugardener-hackathon-2026-docs")
+GCS_BUCKET = os.environ.get("GCS_BUCKET", "hackathon4-487208-docs")
 
 # Firestore
 FIRESTORE_COLLECTION = os.environ.get("FIRESTORE_COLLECTION", "scan_results")
