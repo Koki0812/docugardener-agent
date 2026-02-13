@@ -539,7 +539,13 @@ with col_left:
                 file_status_icon = "🟡"
                 file_status_text = f"In Progress ({approved_count + denied_count}/{n_issues})"
             
-            with st.expander(f"{file_status_icon} {fname} — {file_status_text}", expanded=False):
+            # Expander State Management
+            if "expanded_scans" not in st.session_state:
+                st.session_state.expanded_scans = set()
+            
+            is_expanded = scan_id in st.session_state.expanded_scans
+            
+            with st.expander(f"{file_status_icon} {fname} — {file_status_text}", expanded=is_expanded):
                 st.markdown(f"<div style='margin-bottom:12px; font-size:0.9rem; color:#666;'>Found {n_issues} issues. Please review each one:</div>", unsafe_allow_html=True)
 
                 for i, issue in enumerate(all_issues):
@@ -558,7 +564,7 @@ with col_left:
                         bg_style = "border: 1px solid #EEE;"
 
                     st.markdown(f"""
-                    <div style="{bg_style} border-radius:8px; padding:12px; margin-bottom:12px;">
+                    <div style="{bg_style} border-radius:8px; padding:12px; margin-bottom:0px;">
                         <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
                             <span style="font-weight:bold; font-size:0.85rem;">Issue {i+1}: {issue['category']}</span>
                             {status_html}
@@ -590,18 +596,23 @@ with col_left:
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # Buttons (only show if pending or to allow changing mind)
-                    b_col1, b_col2, b_skip = st.columns([1, 1, 3])
+                    # Spacing
+                    st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+                    
+                    # Buttons (Compact)
+                    b_col1, b_col2, b_skip = st.columns([0.15, 0.15, 0.7])
                     with b_col1:
-                        if st.button("Approve", key=f"app_{issue_key}", type="primary" if status is None else "secondary", use_container_width=True):
+                        if st.button("Approve", key=f"app_{issue_key}", type="primary" if status is None else "secondary"):
                             st.session_state.review_status[issue_key] = "approved"
+                            st.session_state.expanded_scans.add(scan_id) # Keep open
                             st.rerun()
                     with b_col2:
-                         if st.button("Deny", key=f"den_{issue_key}", use_container_width=True):
+                         if st.button("Deny", key=f"den_{issue_key}"):
                             st.session_state.review_status[issue_key] = "denied"
+                            st.session_state.expanded_scans.add(scan_id) # Keep open
                             st.rerun()
                     
-                    st.markdown("---")
+                    st.markdown("<hr style='margin-top: 16px; margin-bottom: 16px; opacity: 0.3;'>", unsafe_allow_html=True)
 
 with col_right:
     st.subheader("⚠ Manual Action Required")
