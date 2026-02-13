@@ -215,11 +215,45 @@ def categorize_scan(scan_item):
     else:
         return "auto_fixed"
 
-def calculate_health(total, alerts):
+def calculate_health(history, review_status):
     base_score = 100
-    # Adjusted weights to prevent score from hitting 0 too easily
-    deduction = (total * 1) + (alerts * 5)
-    return max(0, base_score - deduction)
+    penalty = 0
+    
+    # Weights based on AI-determined severity
+    severity_weights = {
+        "critical": 10,
+        "warning": 5,
+        "info": 1,
+        "unknown": 2
+    }
+    
+    for scan in history:
+        scan_id = scan.get("scan_id", scan.get("id"))
+        
+        c_list = scan.get("contradictions", [])
+        v_list = scan.get("visual_decays", [])
+        
+        # Contradictions (0 to len(c)-1)
+        for i, issue in enumerate(c_list):
+            issue_key = f"{scan_id}_issue_{i}"
+            # If approved or denied, it's "resolved" -> No penalty
+            if review_status.get(issue_key) in ["approved", "denied"]:
+                continue
+            
+            sev = issue.get("severity", "unknown").lower()
+            penalty += severity_weights.get(sev, 2)
+            
+        # Visual Decays (len(c) to len(c)+len(v)-1)
+        offset = len(c_list)
+        for j, issue in enumerate(v_list):
+            issue_key = f"{scan_id}_issue_{offset+j}"
+            if review_status.get(issue_key) in ["approved", "denied"]:
+                continue
+            
+            sev = issue.get("severity", "unknown").lower()
+            penalty += severity_weights.get(sev, 2)
+        
+    return max(0, base_score - penalty)
 
 # ... (omitted) ...
 
@@ -227,14 +261,13 @@ def calculate_health(total, alerts):
         st.markdown("""
         **健全性スコア (Gemini 1.5 Pro 分析)**
         
-        直近のスキャン結果（最大20件）に基づき、リポジトリの「信頼度」を 100点満点で評価します。
+        AIが判定した「重要度 (Severity)」に応じて、動的に減点幅が変化します。
         
-        *   **重大な事実矛盾 (-2点)**: ドキュメント間で記述が食い違っている場合。
-        *   **視覚的陳腐化 (-1点)**: UI画像が古い場合。
-        *   **用語・スタイルの不統一 (-1点)**: スタイルガイドとの不整合。
-        *   **要手動レビュー (-5点)**: 自動処理できないファイル (PDF等)。
+        *   **Critical (重大: -10点)**: 顧客への誤った案内につながる矛盾、法的リスクのある記載など。
+        *   **Warning (警告: -5点)**: 旧社名の残り、用語の揺らぎなど。
+        *   **Info (情報: -1点)**: 画像の軽微な古さ、レイアウト崩れなど。
         
-        ※ 現在はデモ用に、全スキャン履歴から算出しています。
+        *Pending Review (未承認) の修正案が多いほど、リスクが高いとみなされスコアが低下します。*
         """)
 
 # ---------------------------------------------------------------------------
