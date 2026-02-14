@@ -482,12 +482,39 @@ def render_admin_dashboard():
                 for c in contradictions:
                     # Handle string contradictions (old pipeline format)
                     if isinstance(c, str):
-                        all_issues.append({"type": "text", "category": "AI分析", "old": c[:200], "new": "（自動修正済み）", "doc": "", "detail": c})
+                        # Try to split at "→ 修正提案:" delimiter
+                        if "→ 修正提案:" in c:
+                            parts = c.split("→ 修正提案:", 1)
+                            all_issues.append({"type": "text", "category": "AI分析", "old": parts[0].strip(), "new": parts[1].strip(), "doc": "", "detail": c})
+                        else:
+                            all_issues.append({"type": "text", "category": "AI分析", "old": c[:200], "new": "（AIにより修正済み）", "doc": "", "detail": c})
                         continue
-                    # Prefer old_text > message > analysis for "修正前"
-                    old_display = c.get("old_text", "") or c.get("message", "") or c.get("analysis", "")[:200] if c.get("analysis") else c.get("message", "（AIが矛盾を検出）")
-                    # Prefer new_text > suggestion for "修正後"
-                    new_display = c.get("new_text", "") or c.get("suggestion", "（修正提案あり）")
+
+                    # === Build old_display (修正前: 問題の説明) ===
+                    old_display = c.get("old_text", "") or c.get("message", "")
+                    if not old_display:
+                        # Fallback: parse analysis field
+                        analysis = c.get("analysis", "")
+                        if analysis:
+                            if "→ 修正提案:" in analysis:
+                                old_display = analysis.split("→ 修正提案:", 1)[0].strip()
+                            else:
+                                old_display = analysis[:200]
+                        else:
+                            old_display = "（AIが矛盾を検出）"
+
+                    # === Build new_display (修正後: AIによる修正内容) ===
+                    new_display = c.get("new_text", "") or c.get("suggestion", "")
+                    if not new_display:
+                        # Fallback: parse suggestion from analysis field
+                        analysis = c.get("analysis", "")
+                        if "→ 修正提案:" in analysis:
+                            new_display = analysis.split("→ 修正提案:", 1)[1].strip()
+                        elif "修正提案:" in analysis:
+                            new_display = analysis.split("修正提案:", 1)[1].strip()
+                        else:
+                            new_display = "（AIにより修正済み）"
+
                     all_issues.append({"type": "text", "category": c.get("category", "テキスト修正"), "old": old_display, "new": new_display, "doc": c.get("old_doc", ""), "detail": c.get("message", "")})
                 for v in visual_decays:
                     all_issues.append({"type": "image" if "png" in v.get("suggestion", "") else "text", "category": v.get("category", "画像修正"), "old": v.get("description", "旧画像"), "new": v.get("suggestion", "新画像"), "doc": v.get("old_doc", "")})
