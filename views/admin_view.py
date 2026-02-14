@@ -43,23 +43,33 @@ def _save_review_feedback(scan_id: str, issue_key: str, decision: str, reason: s
 def _run_agent_demo(doc_id: str) -> dict[str, Any]:
     time.sleep(1.5)
     
-    # SCENARIO 1: Operations Manual (Text + Visual)
-    if "Operations_Manual" in doc_id:
+    # SCENARIO 1: UI Guide (contradictions + visual decay)
+    if "UI_Guide" in doc_id:
         return {
             "contradictions": [
                 {
-                    "severity": "critical", "category": "Facts",
-                    "old_doc": "Operations Manual v2.1",
-                    "message": "Top-right gear icon (⚙) is no longer used for Settings.",
-                    "suggestion": "Access Settings via the new Side Menu (bottom-left).",
-                }
+                    "severity": "critical", "category": "ナビゲーション手順",
+                    "old_doc": "UI Guide v2",
+                    "message": "設定画面への遷移方法が旧バージョン（ギアアイコン）のまま",
+                    "suggestion": "サイドメニューの「設定」からアクセスする手順に更新",
+                    "old_text": "画面右上のギアアイコン（⚙）をクリックし、表示されるドロップダウンメニューから「設定」を選択してください。",
+                    "new_text": "サイドメニューの「設定」をクリックして、設定画面を開いてください。（v3.0よりギアアイコンは廃止されました）",
+                },
+                {
+                    "severity": "warning", "category": "用語変更",
+                    "old_doc": "UI Guide v2",
+                    "message": "「ダッシュボード」はv3.0で「ホーム画面」に名称変更済み",
+                    "suggestion": "全ての「ダッシュボード」を「ホーム画面」に置換",
+                    "old_text": "ログイン後、ダッシュボードが表示されます。ダッシュボードから各機能にアクセスしてください。",
+                    "new_text": "ログイン後、ホーム画面が表示されます。ホーム画面から各機能にアクセスしてください。",
+                },
             ],
             "visual_decays": [
                 {
-                    "severity": "info", "category": "UI Freshness",
+                    "severity": "warning", "category": "スクリーンショット更新",
                     "old_doc": "Operations Manual v2.1",
-                    "description": "Login screen screenshot is outdated (v2.0 Blue theme)",
-                    "suggestion": "https://storage.googleapis.com/docugardener-public/v3-login-screen.png",
+                    "description": "ログイン画面のスクリーンショットが旧デザイン（v2.0 青テーマ）のまま",
+                    "suggestion": "v3.0のダークテーマ＋SSO対応の新ログイン画面に差し替え",
                     "type": "image_replacement"
                 },
             ],
@@ -72,16 +82,20 @@ def _run_agent_demo(doc_id: str) -> dict[str, Any]:
         return {
             "contradictions": [
                 {
-                    "severity": "warning", "category": "Terminology",
+                    "severity": "warning", "category": "用語統一",
                     "old_doc": "New Hire Guide 2024",
-                    "message": "Term mismatch: 'Dashboard' is deprecated.",
-                    "suggestion": "Replace 'Dashboard' with 'Home Screen' throughout the document.",
+                    "message": "「ダッシュボード」は廃止済み用語",
+                    "suggestion": "「ホーム画面」に一括置換",
+                    "old_text": "ログイン後、ダッシュボードから各機能にアクセスできます。",
+                    "new_text": "ログイン後、ホーム画面から各機能にアクセスできます。",
                 },
                 {
-                    "severity": "info", "category": "Style",
+                    "severity": "info", "category": "連絡先更新",
                     "old_doc": "New Hire Guide 2024",
-                    "message": "Phrasing: 'Log in to portal' is ambiguous.",
-                    "suggestion": "Use 'Sign in to Corporate Portal' for consistency.",
+                    "message": "IT部門の連絡先が旧情報（内線1234）のまま",
+                    "suggestion": "Slackチャンネル #it-support に更新",
+                    "old_text": "IT部門: 内線 1234",
+                    "new_text": "IT部門: Slackチャンネル #it-support（内線1234は廃止）",
                 }
             ],
             "visual_decays": [],
@@ -94,20 +108,26 @@ def _run_agent_demo(doc_id: str) -> dict[str, Any]:
         return {
             "contradictions": [
                 {
-                    "severity": "critical", "category": "Format",
+                    "severity": "critical", "category": "ファイル形式",
                     "old_doc": doc_id,
-                    "message": "File format is PDF (Non-editable).",
-                    "suggestion": "Please convert to .docx for auto-fixing.",
+                    "message": "PDF形式のため自動修正不可。.docx形式に変換後、再スキャンが必要です。",
+                    "suggestion": ".docx形式に変換することで自動修正が可能になります。",
                 },
                 {
-                    "severity": "warning", "category": "Version",
+                    "severity": "warning", "category": "バージョン矛盾",
                     "old_doc": doc_id,
-                    "message": "Content conflicts with 'Product Specs v3.0'.",
-                    "suggestion": "Manual review required to resolve version conflict.",
+                    "message": "製品仕様v2.0の記載が最新のv3.0仕様と矛盾しています。API仕様・機能説明の更新が必要です。",
+                    "suggestion": "Product Specs v3.0の内容に合わせて手動で修正してください。",
+                },
+                {
+                    "severity": "info", "category": "連絡先情報",
+                    "old_doc": doc_id,
+                    "message": "サポート窓口の連絡先が旧情報のままです（内線1234 → Slack #it-support）。",
+                    "suggestion": "最新の連絡先に手動で更新してください。",
                 }
             ],
             "visual_decays": [],
-            "suggestions_count": 2,
+            "suggestions_count": 3,
             "related_docs": [{"title": "Product Specs v3.0", "doc_id": "ctx_3"}]
         }
 
@@ -119,20 +139,24 @@ def _run_agent_demo(doc_id: str) -> dict[str, Any]:
                 "old_doc": doc_id,
                 "message": "「ユーザー」と「ユーザ」が混在しています。",
                 "suggestion": "「ユーザー」に統一してください。",
+                "old_text": "ユーザは管理画面からログインし、ユーザー設定を更新できます。",
+                "new_text": "ユーザーは管理画面からログインし、ユーザー設定を更新できます。",
             },
             {
                 "severity": "info", "category": "住所変更",
                 "old_doc": doc_id,
-                "message": "旧住所：東京都港区六本木 1-2-3",
-                "suggestion": "新住所：東京都渋谷区渋谷 4-5-6",
+                "message": "旧住所が記載されたままです。",
+                "suggestion": "最新の住所に更新してください。",
+                "old_text": "本社所在地：東京都港区六本木 1-2-3",
+                "new_text": "本社所在地：東京都渋谷区渋谷 4-5-6",
             }
         ],
         "visual_decays": [
              {
                 "severity": "info", "category": "UI更新",
                 "old_doc": doc_id,
-                "description": "ログイン画面のキャプチャが古いです (ボタンが四角い)",
-                "suggestion": "https://storage.googleapis.com/docugardener-public/v3-login-screen.png",
+                "description": "ログイン画面のキャプチャが旧デザインです（ボタンが四角い → 丸ボタンに変更済み）",
+                "suggestion": "v3.0のダークテーマ新ログイン画面のスクリーンショットに差し替え",
                 "type": "image_replacement"
             }
         ],
@@ -456,7 +480,9 @@ def render_admin_dashboard():
                 visual_decays = item.get("visual_decays", [])
                 all_issues = []
                 for c in contradictions:
-                    all_issues.append({"type": "text", "category": c.get("category", "テキスト修正"), "old": c.get("message", "元のテキスト"), "new": c.get("suggestion", "修正後"), "doc": c.get("old_doc", "")})
+                    old_display = c.get("old_text", c.get("message", "元のテキスト"))
+                    new_display = c.get("new_text", c.get("suggestion", "修正後"))
+                    all_issues.append({"type": "text", "category": c.get("category", "テキスト修正"), "old": old_display, "new": new_display, "doc": c.get("old_doc", ""), "detail": c.get("message", "")})
                 for v in visual_decays:
                     all_issues.append({"type": "image" if "png" in v.get("suggestion", "") else "text", "category": v.get("category", "画像修正"), "old": v.get("description", "旧画像"), "new": v.get("suggestion", "新画像"), "doc": v.get("old_doc", "")})
                 
@@ -566,6 +592,7 @@ def render_admin_dashboard():
         if not manual_alert_items:
             st.success("手動対応の必要はありません。")
         else:
+            import html as html_mod
             for item in manual_alert_items[:5]:
                 fname = item.get("file_name", "不明")
                 bucket_name = item.get("bucket", "hackathon4-487208-docs")
@@ -575,32 +602,29 @@ def render_admin_dashboard():
                 gcs_path = f"gs://{bucket_name}/{fname}"
                 console_url = f"https://console.cloud.google.com/storage/browser/_details/{bucket_name}/{fname}"
 
-                # Card header
-                st.markdown(f'<div class="alert-card"><span class="alert-badge">要手動対応</span><div class="rc-title" style="color:#D92D20; margin-top:6px;">{fname}</div><div class="rc-desc">{n_issues} 件の矛盾を検出</div></div>', unsafe_allow_html=True)
+                with st.expander(f"🔴 {fname} — {n_issues} 件の矛盾を検出", expanded=False):
+                    # Issue details
+                    issue_num = 0
+                    for c in contradictions:
+                        issue_num += 1
+                        cat = html_mod.escape(str(c.get("category", "テキスト矛盾")))
+                        raw_msg = str(c.get("message", c.get("analysis", "詳細なし")))
+                        msg = html_mod.escape(raw_msg).replace("\n", "<br>")
+                        sug = html_mod.escape(str(c.get("suggestion", ""))).replace("\n", "<br>")
+                        sug_html = f'<div style="color:#2E7D32; margin-top:3px;">💡 提案: {sug}</div>' if sug else ""
+                        st.markdown(f'<div style="margin-top:6px; padding:8px 10px; background:#FFF5F5; border-left:3px solid #FF453A; border-radius:4px; font-size:0.78rem;"><div style="font-weight:700; color:#D92D20; margin-bottom:3px;">#{issue_num} {cat}</div><div style="color:#333;">⚠ {msg}</div>{sug_html}</div>', unsafe_allow_html=True)
 
-                # Render each issue as a separate st.markdown call to avoid parser breaks
-                import html as html_mod
-                issue_num = 0
-                for c in contradictions:
-                    issue_num += 1
-                    cat = html_mod.escape(str(c.get("category", "テキスト矛盾")))
-                    raw_msg = str(c.get("message", c.get("analysis", "詳細なし")))
-                    msg = html_mod.escape(raw_msg).replace("\n", "<br>")
-                    sug = html_mod.escape(str(c.get("suggestion", ""))).replace("\n", "<br>")
-                    sug_html = f'<div style="color:#2E7D32; margin-top:3px;">💡 提案: {sug}</div>' if sug else ""
-                    st.markdown(f'<div style="margin-top:6px; padding:8px 10px; background:#FFF5F5; border-left:3px solid #FF453A; border-radius:4px; font-size:0.78rem;"><div style="font-weight:700; color:#D92D20; margin-bottom:3px;">#{issue_num} {cat}</div><div style="color:#333;">⚠ {msg}</div>{sug_html}</div>', unsafe_allow_html=True)
+                    for v in visual_decays:
+                        issue_num += 1
+                        cat = html_mod.escape(str(v.get("category", "画像劣化")))
+                        raw_desc = str(v.get("description", "詳細なし"))
+                        desc = html_mod.escape(raw_desc).replace("\n", "<br>")
+                        sug = html_mod.escape(str(v.get("suggestion", ""))).replace("\n", "<br>")
+                        sug_html = f'<div style="color:#2E7D32; margin-top:3px;">💡 提案: {sug}</div>' if sug else ""
+                        st.markdown(f'<div style="margin-top:6px; padding:8px 10px; background:#FFF5F5; border-left:3px solid #FF453A; border-radius:4px; font-size:0.78rem;"><div style="font-weight:700; color:#D92D20; margin-bottom:3px;">#{issue_num} {cat}</div><div style="color:#333;">⚠ {desc}</div>{sug_html}</div>', unsafe_allow_html=True)
 
-                for v in visual_decays:
-                    issue_num += 1
-                    cat = html_mod.escape(str(v.get("category", "画像劣化")))
-                    raw_desc = str(v.get("description", "詳細なし"))
-                    desc = html_mod.escape(raw_desc).replace("\n", "<br>")
-                    sug = html_mod.escape(str(v.get("suggestion", ""))).replace("\n", "<br>")
-                    sug_html = f'<div style="color:#2E7D32; margin-top:3px;">💡 提案: {sug}</div>' if sug else ""
-                    st.markdown(f'<div style="margin-top:6px; padding:8px 10px; background:#FFF5F5; border-left:3px solid #FF453A; border-radius:4px; font-size:0.78rem;"><div style="font-weight:700; color:#D92D20; margin-bottom:3px;">#{issue_num} {cat}</div><div style="color:#333;">⚠ {desc}</div>{sug_html}</div>', unsafe_allow_html=True)
-
-                # File location link
-                st.markdown(f'<div style="margin-top:8px; padding:6px 10px; background:#FFF; border-radius:6px; border:1px solid #E5E5EA; font-size:0.78rem;"><span style="color:#86868B;">📍 格納場所:</span> <code style="font-size:0.75rem; background:#F5F5F7; padding:2px 6px; border-radius:4px;">{gcs_path}</code><br><a href="{console_url}" target="_blank" style="color:#5E5CE6; text-decoration:none; font-weight:600; font-size:0.78rem;">🔗 Cloud Console で開く ↗</a></div>', unsafe_allow_html=True)
+                    # File location link
+                    st.markdown(f'<div style="margin-top:10px; padding:6px 10px; background:#FFF; border-radius:6px; border:1px solid #E5E5EA; font-size:0.78rem;"><span style="color:#86868B;">📍 格納場所:</span> <code style="font-size:0.75rem; background:#F5F5F7; padding:2px 6px; border-radius:4px;">{gcs_path}</code><br><a href="{console_url}" target="_blank" style="color:#5E5CE6; text-decoration:none; font-weight:600; font-size:0.78rem;">🔗 Cloud Console で開く ↗</a></div>', unsafe_allow_html=True)
     
     # Activity Feed
     st.subheader("最近のアクティビティ")
