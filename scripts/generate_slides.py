@@ -1,6 +1,7 @@
 """Generate demo video slides as PPTX for DocuAlign AI."""
 from pptx import Presentation
 from pptx.util import Inches, Pt, Emu
+import os
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.enum.shapes import MSO_SHAPE
@@ -14,6 +15,10 @@ LIGHT_GRAY = RGBColor(0xA0, 0xA0, 0xB0)
 CARD_BG = RGBColor(0x1E, 0x29, 0x3B)       # Dark card
 CRITICAL_RED = RGBColor(0xEF, 0x44, 0x44)
 WARNING_YELLOW = RGBColor(0xFB, 0xBF, 0x24)
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
+LOGO_PATH = os.path.join(PROJECT_DIR, "assets", "logo.png")
 INFO_BLUE = RGBColor(0x60, 0xA5, 0xFA)
 
 SLIDE_W = Inches(13.333)  # 16:9
@@ -84,19 +89,19 @@ def build_presentation():
     bar.fill.fore_color.rgb = ACCENT_GREEN
     bar.line.fill.background()
 
-    # Logo icon (circle)
-    circle = slide1.shapes.add_shape(
-        MSO_SHAPE.OVAL, Inches(5.5), Inches(1.5), Inches(2.3), Inches(2.3)
-    )
-    circle.fill.solid()
-    circle.fill.fore_color.rgb = ACCENT_GREEN
-    circle.line.fill.background()
-    tf = circle.text_frame
-    tf.word_wrap = True
-    p = tf.paragraphs[0]
-    p.text = "📄"
-    p.font.size = Pt(60)
-    p.alignment = PP_ALIGN.CENTER
+    # Logo image
+    if os.path.exists(LOGO_PATH):
+        slide1.shapes.add_picture(
+            LOGO_PATH, Inches(9.0), Inches(1.2), Inches(3.5), Inches(3.5)
+        )
+    else:
+        circle = slide1.shapes.add_shape(
+            MSO_SHAPE.OVAL, Inches(9.0), Inches(1.2), Inches(3.5), Inches(3.5)
+        )
+        circle.fill.solid()
+        circle.fill.fore_color.rgb = ACCENT_GREEN
+        circle.line.fill.background()
+
 
     # Main title
     add_text_box(slide1, Inches(1), Inches(2.0), Inches(11), Inches(1.2),
@@ -292,7 +297,13 @@ def build_presentation():
     bar.fill.fore_color.rgb = ACCENT_GREEN
     bar.line.fill.background()
 
-    add_text_box(slide5, Inches(1), Inches(1.5), Inches(11), Inches(1.2),
+    # Logo image on closing slide
+    if os.path.exists(LOGO_PATH):
+        slide5.shapes.add_picture(
+            LOGO_PATH, Inches(5.4), Inches(0.5), Inches(2.5), Inches(2.5)
+        )
+
+    add_text_box(slide5, Inches(1), Inches(3.2), Inches(11), Inches(1.2),
                  "DocuAlign AI", font_size=60, color=WHITE, bold=True,
                  alignment=PP_ALIGN.CENTER)
 
