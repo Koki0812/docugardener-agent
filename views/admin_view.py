@@ -569,13 +569,43 @@ def render_admin_dashboard():
             for item in manual_alert_items[:5]:
                 fname = item.get("file_name", "不明")
                 bucket_name = item.get("bucket", "hackathon4-487208-docs")
-                n_issues = len(item.get("contradictions", [])) + len(item.get("visual_decays", []))
+                contradictions = item.get("contradictions", [])
+                visual_decays = item.get("visual_decays", [])
+                n_issues = len(contradictions) + len(visual_decays)
                 gcs_path = f"gs://{bucket_name}/{fname}"
                 console_url = f"https://console.cloud.google.com/storage/browser/_details/{bucket_name}/{fname}"
+
+                # Build issue detail HTML
+                issues_html = ""
+                issue_num = 0
+                for c in contradictions:
+                    issue_num += 1
+                    cat = c.get("category", "テキスト矛盾")
+                    msg = c.get("message", c.get("analysis", "詳細なし"))
+                    sug = c.get("suggestion", "")
+                    issues_html += f"""
+                    <div style="margin-top:6px; padding:8px 10px; background:#FFF5F5; border-left:3px solid #FF453A; border-radius:4px; font-size:0.78rem;">
+                        <div style="font-weight:700; color:#D92D20; margin-bottom:3px;">#{issue_num} {cat}</div>
+                        <div style="color:#333;">⚠ {msg}</div>
+                        {"<div style='color:#2E7D32; margin-top:3px;'>💡 提案: " + sug + "</div>" if sug else ""}
+                    </div>"""
+                for v in visual_decays:
+                    issue_num += 1
+                    cat = v.get("category", "画像劣化")
+                    desc = v.get("description", "詳細なし")
+                    sug = v.get("suggestion", "")
+                    issues_html += f"""
+                    <div style="margin-top:6px; padding:8px 10px; background:#FFF5F5; border-left:3px solid #FF453A; border-radius:4px; font-size:0.78rem;">
+                        <div style="font-weight:700; color:#D92D20; margin-bottom:3px;">#{issue_num} {cat}</div>
+                        <div style="color:#333;">⚠ {desc}</div>
+                        {"<div style='color:#2E7D32; margin-top:3px;'>💡 提案: " + sug + "</div>" if sug else ""}
+                    </div>"""
+
                 st.markdown(f"""<div class="alert-card">
                     <span class="alert-badge">要手動対応</span>
                     <div class="rc-title" style="color:#D92D20; margin-top:6px;">{fname}</div>
                     <div class="rc-desc">{n_issues} 件の矛盾を検出</div>
+                    {issues_html}
                     <div style="margin-top:8px; padding:6px 10px; background:#FFF; border-radius:6px; border:1px solid #E5E5EA; font-size:0.78rem;">
                         <span style="color:#86868B;">📍 格納場所:</span>
                         <code style="font-size:0.75rem; background:#F5F5F7; padding:2px 6px; border-radius:4px;">{gcs_path}</code>
