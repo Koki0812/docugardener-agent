@@ -131,26 +131,35 @@ def build_presentation():
     set_slide_bg(slide2, DARK_BG)
 
     add_text_box(slide2, Inches(0.8), Inches(0.5), Inches(10), Inches(0.8),
-                 "📊 ドキュメントの「サイレント劣化」問題", font_size=36,
+                 "大企業が抱える「ドキュメント劣化」問題", font_size=36,
                  color=WHITE, bold=True)
 
     add_text_box(slide2, Inches(0.8), Inches(1.4), Inches(11), Inches(0.5),
-                 "企業のドキュメントは作成後、静かに劣化し続けています",
-                 font_size=18, color=LIGHT_GRAY)
+                 "既存ツールでは解決できない — 差分ではなく「意味的な矛盾」を検出する技術が存在しなかった",
+                 font_size=16, color=LIGHT_GRAY)
 
-    # 3 stat cards
+    # 3 stat cards (industry research-backed)
     stats = [
-        ("60%", "のドキュメントが\n作成6ヶ月後には\n情報が古くなっている", "📄", CRITICAL_RED),
-        ("73%", "のユーザーが\n古い手順書で\n作業ミスを経験", "⚠️", WARNING_YELLOW),
-        ("¥480万/年", "の損失が\nドキュメント劣化による\n業務ロスで発生", "💰", INFO_BLUE),
+        ("21.3%",
+         "の生産性が\nドキュメント管理の\n非効率で失われている",
+         "📉", CRITICAL_RED,
+         "Iron Mountain 調査"),
+        ("$19,732",
+         "/人・年のコストが\n情報検索・文書管理に\n費やされている",
+         "💰", WARNING_YELLOW,
+         "IDC / Ripcord 調査"),
+        ("2.5h/日",
+         "を従業員が\n必要な情報の検索に\n費やしている",
+         "⏱️", INFO_BLUE,
+         "Forbes / McKinsey"),
     ]
 
-    for i, (number, desc, icon, accent) in enumerate(stats):
+    for i, (number, desc, icon, accent, source) in enumerate(stats):
         x = Inches(0.8 + i * 4.0)
-        y = Inches(2.3)
+        y = Inches(2.1)
 
         # Card
-        card = add_rounded_rect(slide2, x, y, Inches(3.5), Inches(4.2), CARD_BG)
+        card = add_rounded_rect(slide2, x, y, Inches(3.5), Inches(4.5), CARD_BG)
 
         # Icon
         add_text_box(slide2, x + Inches(0.3), y + Inches(0.3),
@@ -163,8 +172,13 @@ def build_presentation():
 
         # Description
         add_text_box(slide2, x + Inches(0.3), y + Inches(2.5),
-                     Inches(3), Inches(1.5), desc, font_size=16,
+                     Inches(3), Inches(1.2), desc, font_size=16,
                      color=LIGHT_GRAY)
+
+        # Source
+        add_text_box(slide2, x + Inches(0.3), y + Inches(3.8),
+                     Inches(3), Inches(0.5), source, font_size=11,
+                     color=RGBColor(0x70, 0x70, 0x80))
 
     # =====================================================================
     # SLIDE 3: Runtime Architecture (image)
