@@ -137,7 +137,143 @@ def _run_agent_demo(doc_id: str) -> dict[str, Any]:
             "related_docs": [{"title": "API Migration Guide v2", "doc_id": "ctx_4"}]
         }
 
-    # SCENARIO 4: Legacy PDF (Manual Action)
+    # SCENARIO 4: API Reference (Endpoint & Authentication)
+    elif "API_Reference" in doc_id:
+        return {
+            "contradictions": [
+                {
+                    "severity": "critical", "category": "エンドポイント変更",
+                    "old_doc": "API Reference v2.5",
+                    "message": "認証エンドポイントが旧バージョン /auth/login のまま",
+                    "suggestion": "v3.0 では /api/v3/auth/token に変更されました",
+                    "old_text": "POST /auth/login\nパラメータ: username, password\nレスポンス: { token: string }",
+                    "new_text": "POST /api/v3/auth/token\nパラメータ: email, password, grant_type\nレスポンス: { access_token: string, refresh_token: string, expires_in: number }",
+                },
+                {
+                    "severity": "critical", "category": "認証方式更新",
+                    "old_doc": "API Reference v2.5",
+                    "message": "API キー認証の記載があるが、v3.0 では OAuth 2.0 + JWT に変更済み",
+                    "suggestion": "OAuth 2.0 フローと JWT トークン使用方法を記載",
+                    "old_text": "リクエストヘッダーに X-API-Key: YOUR_API_KEY を含めてください。",
+                    "new_text": "Authorization: Bearer YOUR_JWT_TOKEN ヘッダーを使用してください。トークンは /api/v3/auth/token エンドポイントで取得できます。",
+                },
+                {
+                    "severity": "warning", "category": "パラメータ追加",
+                    "old_doc": "API Reference v2.5",
+                    "message": "ユーザー検索APIに新規パラメータ 'role' が追加されているが未記載",
+                    "suggestion": "role パラメータ（admin, user, guest）の説明を追加",
+                    "old_text": "GET /api/v3/users?name={name}&status={status}",
+                    "new_text": "GET /api/v3/users?name={name}&status={status}&role={role}\n新規パラメータ role: ユーザーロールでフィルタ（admin|user|guest）",
+                },
+            ],
+            "visual_decays": [],
+            "suggestions_count": 3,
+            "related_docs": [{"title": "API Migration Guide v3.0", "doc_id": "ctx_5"}]
+        }
+
+    # SCENARIO 5: Security Policy (Password & Encryption)
+    elif "Security_Policy" in doc_id:
+        return {
+            "contradictions": [
+                {
+                    "severity": "critical", "category": "セキュリティ要件",
+                    "old_doc": "Security Policy 2023",
+                    "message": "パスワード要件が古い基準（8文字以上）のまま",
+                    "suggestion": "2024年基準では12文字以上 + MFA必須に更新",
+                    "old_text": "パスワードは最低8文字で、英数字を含む必要があります。",
+                    "new_text": "パスワードは最低12文字で、英数字+記号を含む必要があります。さらに多要素認証(MFA)の有効化が必須です。",
+                },
+                {
+                    "severity": "critical", "category": "暗号化方式",
+                    "old_doc": "Security Policy 2023",
+                    "message": "データ暗号化に SHA-1 の記載があるが、2024年より SHA-256 が必須",
+                    "suggestion": "SHA-256 以上の暗号化アルゴリズム使用を明記",
+                    "old_text": "機密データは SHA-1 または MD5 でハッシュ化してください。",
+                    "new_text": "機密データは SHA-256 以上（推奨: SHA-3）でハッシュ化してください。SHA-1 と MD5 は脆弱性のため使用禁止です。",
+                },
+                {
+                    "severity": "warning", "category": "アクセス制御",
+                    "old_doc": "Security Policy 2023",
+                    "message": "ロールベースアクセス制御(RBAC)の記載がない",
+                    "suggestion": "2024年より RBAC による権限管理が必須",
+                    "old_text": "ユーザーには適切なアクセス権限を付与してください。",
+                    "new_text": "ロールベースアクセス制御(RBAC)により、最小権限の原則に基づいて権限を付与してください。デフォルトロール: Admin, Editor, Viewer を使用します。",
+                },
+            ],
+            "visual_decays": [],
+            "suggestions_count": 3,
+            "related_docs": [{"title": "Security Standards 2024", "doc_id": "ctx_6"}]
+        }
+
+    # SCENARIO 6: Troubleshooting FAQ (Outdated Solutions)
+    elif "Troubleshooting_FAQ" in doc_id or "FAQ" in doc_id:
+        return {
+            "contradictions": [
+                {
+                    "severity": "warning", "category": "解決済み問題",
+                    "old_doc": "Troubleshooting FAQ v2.0",
+                    "message": "ログインエラーの対処法が v2.5 で修正済みのバグを案内している",
+                    "suggestion": "v3.0 では SSO 認証に変更されたため、この項目自体が不要",
+                    "old_text": "Q: ログイン時に 'Invalid password' エラーが出る\nA: パスワードをリセットしてください",
+                    "new_text": "Q: ログイン時にエラーが出る\nA: SSO 認証に移行しました。社内IDプロバイダーで認証してください。パスワード認証は廃止されました。",
+                },
+                {
+                    "severity": "info", "category": "バージョン情報",
+                    "old_doc": "Troubleshooting FAQ v2.0",
+                    "message": "推奨ブラウザが古いバージョン（Chrome 90+）のまま",
+                    "suggestion": "最新の推奨環境（Chrome 120+, Edge 120+）に更新",
+                    "old_text": "推奨ブラウザ: Chrome 90 以上、Firefox 88 以上",
+                    "new_text": "推奨ブラウザ: Chrome 120 以上、Edge 120 以上、Firefox 115 ESR 以上（2024年12月時点）",
+                },
+                {
+                    "severity": "warning", "category": "連絡先情報",
+                    "old_doc": "Troubleshooting FAQ v2.0",
+                    "message": "サポート窓口の連絡先が内線番号のまま",
+                    "suggestion": "Slack チャンネル #it-support に更新",
+                    "old_text": "サポートが必要な場合は内線 1234 までお問い合わせください。",
+                    "new_text": "サポートが必要な場合は Slack チャンネル #it-support にご連絡ください（平日 9:00-18:00）。",
+                },
+            ],
+            "visual_decays": [],
+            "suggestions_count": 3,
+            "related_docs": [{"title": "System Requirements v3.0", "doc_id": "ctx_7"}]
+        }
+
+    # SCENARIO 7: Release Notes (Feature Additions)
+    elif "Release_Notes" in doc_id:
+        return {
+            "contradictions": [
+                {
+                    "severity": "info", "category": "機能追加",
+                    "old_doc": "Release Notes v2.5",
+                    "message": "v3.0 で追加された 'ダークモード' 機能の記載がない",
+                    "suggestion": "新機能としてダークモード対応を追記",
+                    "old_text": "",
+                    "new_text": "新機能: ダークモード対応\n設定画面から表示テーマを切り替えられるようになりました（ライト/ダーク/システム連動）。",
+                },
+                {
+                    "severity": "warning", "category": "スクリーンショット",
+                    "old_doc": "Release Notes v2.5",
+                    "message": "新しい UI のスクリーンショットが v2.0 の青テーマのまま",
+                    "suggestion": "v3.0 のダークテーマのスクリーンショットに差し替え",
+                    "old_text": "（スクリーンショット: 青テーマのメイン画面）",
+                    "new_text": "（スクリーンショット: ダークテーマ対応のメイン画面 + テーマ切替UI）",
+                },
+            ],
+            "visual_decays": [
+                {
+                    "severity": "warning", "category": "スクリーンショット更新",
+                    "old_doc": "Release Notes v2.5",
+                    "description": "新機能のスクリーンショットが古いデザイン（v2.0）のまま",
+                    "suggestion": "v3.0 の最新 UI に差し替え",
+                    "type": "image_replacement"
+                },
+            ],
+            "suggestions_count": 2,
+            "related_docs": [{"title": "Feature Specifications v3.0", "doc_id": "ctx_8"}]
+        }
+
+    # SCENARIO 8: Legacy PDF (Manual Action)
     elif "Legacy_Product_Spec" in doc_id or doc_id.endswith(".pdf"):
         return {
             "contradictions": [
