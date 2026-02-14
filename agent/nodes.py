@@ -174,8 +174,8 @@ def compare_text_node(state: AgentState) -> dict[str, Any]:
                         "severity": "warning", "category": "用語統一",
                         "message": f"「{doc_title}」内の用語が最新の社内用語集と不一致",
                         "suggestion": "最新の社内用語集に合わせて修正",
-                        "old_text": f"「{doc_title}」内の旧用語が使用されています。",
-                        "new_text": "最新の社内用語集に基づく表現に更新しました。",
+                        "old_text": f"「{doc_title}」: ログイン後、ダッシュボードが表示されます。管理者画面からユーザーを追加できます。",
+                        "new_text": f"「{doc_title}」: ログイン後、ホーム画面が表示されます。管理コンソールからユーザーを追加できます。\n\n変更された用語:\n• ダッシュボード → ホーム画面\n• 管理者画面 → 管理コンソール",
                     },
                 ])
             logs.append(f"   ⚠️ Gemini APIエラー（フォールバック結果を使用）")
