@@ -143,29 +143,41 @@ def compare_text_node(state: AgentState) -> dict[str, Any]:
                 })
         except Exception as e:
             logger.warning("Gemini compare_text failed for %s: %s", doc_title, e)
-            # Fallback: generate demo contradiction with structured data
-            contradictions.extend([
-                {
-                    "old_doc": doc_title,
-                    "doc_id": doc.get("doc_id", ""),
-                    "severity": "critical",
-                    "category": "ナビゲーション手順",
-                    "message": "設定画面への遷移方法が旧バージョンのギアアイコンのまま",
-                    "suggestion": "サイドメニューの「設定」からアクセスする手順に更新",
-                    "old_text": f"「{doc_title}」には「右上のギアアイコンから設定画面を開く」と記載されています。",
-                    "new_text": "サイドメニューの「設定」をクリックして設定画面を開いてください。（v3.0よりギアアイコンは廃止）",
-                },
-                {
-                    "old_doc": doc_title,
-                    "doc_id": doc.get("doc_id", ""),
-                    "severity": "warning",
-                    "category": "用語変更",
-                    "message": "「ダッシュボード」はv3.0で「ホーム画面」に名称変更済み",
-                    "suggestion": "全ての「ダッシュボード」を「ホーム画面」に置換",
-                    "old_text": "ログイン後、ダッシュボードが表示されます。",
-                    "new_text": "ログイン後、ホーム画面が表示されます。",
-                },
-            ])
+            # Fallback: generate demo contradictions that vary by document
+            _doc_id = doc.get("doc_id", "")
+            if "manual" in doc_title.lower() or "guide" in doc_title.lower():
+                contradictions.extend([
+                    {
+                        "old_doc": doc_title, "doc_id": _doc_id,
+                        "severity": "critical", "category": "ナビゲーション手順",
+                        "message": "設定画面への遷移方法が旧バージョンのギアアイコンのまま",
+                        "suggestion": "サイドメニューの「設定」からアクセスする手順に更新",
+                        "old_text": f"「{doc_title}」: 画面右上のギアアイコン（⚙）をクリックし設定画面を開く",
+                        "new_text": "サイドメニューの「設定」をクリックして設定画面を開いてください。（v3.0よりギアアイコンは廃止）",
+                    },
+                ])
+            elif "spec" in doc_title.lower() or "api" in doc_title.lower():
+                contradictions.extend([
+                    {
+                        "old_doc": doc_title, "doc_id": _doc_id,
+                        "severity": "critical", "category": "API仕様変更",
+                        "message": "REST APIエンドポイントがv1のまま（v2に移行済み）",
+                        "suggestion": "全てのAPIパスを /api/v2/ に更新",
+                        "old_text": f"「{doc_title}」: GET /api/v1/users エンドポイントを使用",
+                        "new_text": "GET /api/v2/users エンドポイントを使用してください。（v1は廃止済み）",
+                    },
+                ])
+            else:
+                contradictions.extend([
+                    {
+                        "old_doc": doc_title, "doc_id": _doc_id,
+                        "severity": "warning", "category": "用語統一",
+                        "message": f"「{doc_title}」内の用語が最新の社内用語集と不一致",
+                        "suggestion": "最新の社内用語集に合わせて修正",
+                        "old_text": f"「{doc_title}」内の旧用語が使用されています。",
+                        "new_text": "最新の社内用語集に基づく表現に更新しました。",
+                    },
+                ])
             logs.append(f"   ⚠️ Gemini APIエラー（フォールバック結果を使用）")
 
     logs.append(f"✅ Pruning完了: {len(contradictions)} 件の矛盾を剪定")

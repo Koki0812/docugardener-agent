@@ -102,6 +102,28 @@ def get_scan_result(scan_id: str) -> dict[str, Any] | None:
         return None
 
 
+def delete_scan_result(scan_id: str) -> bool:
+    """Delete a scan result from Firestore.
+
+    Args:
+        scan_id: The scan ID to delete.
+
+    Returns:
+        True if deleted, False on error.
+    """
+    client = _get_client()
+    if not client:
+        return False
+
+    try:
+        client.collection(COLLECTION).document(scan_id).delete()
+        logger.info(f"🗑️ Deleted scan result: {scan_id}")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Firestore delete error: {e}")
+        return False
+
+
 # ---------------------------------------------------------------------------
 # Review Feedback (AI Learning Loop)
 # ---------------------------------------------------------------------------

@@ -103,7 +103,41 @@ def _run_agent_demo(doc_id: str) -> dict[str, Any]:
             "related_docs": [{"title": "Terminology Guide 2025", "doc_id": "ctx_2"}]
         }
 
-    # SCENARIO 3: Legacy PDF (Manual Action)
+    # SCENARIO 3: User Manual (API & Authentication changes)
+    elif "User_Manual" in doc_id:
+        return {
+            "contradictions": [
+                {
+                    "severity": "critical", "category": "API仕様変更",
+                    "old_doc": "User Manual v1",
+                    "message": "REST APIのエンドポイントがv1のまま（v2に移行済み）",
+                    "suggestion": "全てのAPIパスを /api/v2/ に更新",
+                    "old_text": "データ取得には GET /api/v1/users エンドポイントを使用してください。",
+                    "new_text": "データ取得には GET /api/v2/users エンドポイントを使用してください。（v1は2024年12月に廃止済み）",
+                },
+                {
+                    "severity": "warning", "category": "認証方式変更",
+                    "old_doc": "User Manual v1",
+                    "message": "パスワード認証の記載が残っているが、SSO認証に移行済み",
+                    "suggestion": "SSO（シングルサインオン）による認証手順に更新",
+                    "old_text": "ログイン画面でメールアドレスとパスワードを入力し、「ログイン」ボタンをクリックしてください。",
+                    "new_text": "「SSOでログイン」ボタンをクリックし、社内IDプロバイダーで認証してください。（パスワード認証は廃止されました）",
+                },
+                {
+                    "severity": "info", "category": "機能名変更",
+                    "old_doc": "User Manual v1",
+                    "message": "「レポート出力」機能は「データエクスポート」に名称変更済み",
+                    "suggestion": "全ての「レポート出力」を「データエクスポート」に置換",
+                    "old_text": "レポート出力機能を使用して、月次データをCSV形式で出力できます。",
+                    "new_text": "データエクスポート機能を使用して、月次データをCSV/Excel形式で出力できます。",
+                }
+            ],
+            "visual_decays": [],
+            "suggestions_count": 3,
+            "related_docs": [{"title": "API Migration Guide v2", "doc_id": "ctx_4"}]
+        }
+
+    # SCENARIO 4: Legacy PDF (Manual Action)
     elif "Legacy_Product_Spec" in doc_id or doc_id.endswith(".pdf"):
         return {
             "contradictions": [
@@ -181,20 +215,26 @@ def _poll_and_process_gcs():
         if not blobs:
             return
 
-        # Get already-processed file names from Firestore
-        existing = get_latest_results(limit=100)
-        processed_files = {r.get("file_name", "") for r in existing}
-
-        # Filter to document types only
+        # Get all document blobs
         doc_extensions = (".docx", ".doc", ".pdf", ".txt", ".md")
         new_files = [
             b for b in blobs
             if any(b.name.lower().endswith(ext) for ext in doc_extensions)
-            and b.name not in processed_files
         ]
 
         if not new_files:
             return
+
+        # Delete existing scan results so rescans produce fresh data
+        existing = get_latest_results(limit=100)
+        for old in existing:
+            old_id = old.get("scan_id", "")
+            if old_id:
+                try:
+                    from services.firestore_service import delete_scan_result
+                    delete_scan_result(old_id)
+                except Exception:
+                    pass  # delete_scan_result may not exist yet
 
         for blob in new_files:
             # Generate a scan ID
