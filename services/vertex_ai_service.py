@@ -36,8 +36,10 @@ def compare_text(new_doc_text: str, old_doc_text: str, feedback_context: str = "
         old_doc_text: Text of the older document.
         feedback_context: Optional past reviewer feedback to improve accuracy.
 
-    Returns a dict with keys ``contradictions`` (list) and ``summary``.
+    Returns a dict with keys ``contradictions`` (list of structured dicts) and ``summary``.
     """
+    import json as _json
+
     model = _get_model()
 
     feedback_section = ""
@@ -53,12 +55,21 @@ def compare_text(new_doc_text: str, old_doc_text: str, feedback_context: str = "
 以下の「新しいドキュメント」と「古いドキュメント」を比較し、
 意味的な矛盾や不整合を全て特定してください。
 {feedback_section}
-各矛盾について以下の形式で出力してください:
-- 矛盾の種類（事実の相違 / 手順の変更 / 用語の不一致 / その他）
-- 古いドキュメントの該当箇所（引用）
-- 新しいドキュメントの該当箇所（引用）
-- 矛盾の説明
-- 修正提案
+結果を以下のJSON形式で出力してください（JSON以外のテキストは含めないでください）:
+```json
+[
+  {{
+    "category": "矛盾の種類（例: 手順の変更、用語の不一致、事実の相違、連絡先変更）",
+    "severity": "critical / warning / info のいずれか",
+    "message": "矛盾の説明（何が問題か）",
+    "suggestion": "修正提案（どう直すべきか）",
+    "old_text": "古いドキュメントの該当箇所（原文をそのまま引用）",
+    "new_text": "新しいドキュメントの該当箇所、または修正後のテキスト（原文をそのまま引用）"
+  }}
+]
+```
+
+矛盾が見つからない場合は空配列 `[]` を返してください。
 
 ---
 【新しいドキュメント】
@@ -69,8 +80,32 @@ def compare_text(new_doc_text: str, old_doc_text: str, feedback_context: str = "
 {old_doc_text[:8000]}
 """
     response = model.generate_content(prompt)
+    raw_text = response.text
+
+    # Try to parse structured JSON from Gemini response
+    parsed_items: list[dict[str, Any]] = []
+    try:
+        # Strip markdown code fences if present
+        clean = raw_text.strip()
+        if clean.startswith("```"):
+            clean = clean.split("\n", 1)[1] if "\n" in clean else clean[3:]
+            if clean.endswith("```"):
+                clean = clean[:-3]
+            clean = clean.strip()
+            if clean.startswith("json"):
+                clean = clean[4:].strip()
+        parsed = _json.loads(clean)
+        if isinstance(parsed, list):
+            parsed_items = parsed
+        elif isinstance(parsed, dict) and "contradictions" in parsed:
+            parsed_items = parsed["contradictions"]
+    except (_json.JSONDecodeError, ValueError):
+        logger.warning("Gemini returned non-JSON; storing as raw analysis text")
+        # Fallback: wrap raw text in a single analysis entry
+        parsed_items = [{"analysis": raw_text, "category": "AI分析", "message": raw_text[:200]}]
+
     return {
-        "contradictions": response.text,
+        "contradictions": parsed_items,
         "summary": f"Compared {len(new_doc_text)} chars (new) vs {len(old_doc_text)} chars (old)",
     }
 

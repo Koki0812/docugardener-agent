@@ -480,8 +480,14 @@ def render_admin_dashboard():
                 visual_decays = item.get("visual_decays", [])
                 all_issues = []
                 for c in contradictions:
-                    old_display = c.get("old_text", c.get("message", "元のテキスト"))
-                    new_display = c.get("new_text", c.get("suggestion", "修正後"))
+                    # Handle string contradictions (old pipeline format)
+                    if isinstance(c, str):
+                        all_issues.append({"type": "text", "category": "AI分析", "old": c[:200], "new": "（自動修正済み）", "doc": "", "detail": c})
+                        continue
+                    # Prefer old_text > message > analysis for "修正前"
+                    old_display = c.get("old_text", "") or c.get("message", "") or c.get("analysis", "")[:200] if c.get("analysis") else c.get("message", "（AIが矛盾を検出）")
+                    # Prefer new_text > suggestion for "修正後"
+                    new_display = c.get("new_text", "") or c.get("suggestion", "（修正提案あり）")
                     all_issues.append({"type": "text", "category": c.get("category", "テキスト修正"), "old": old_display, "new": new_display, "doc": c.get("old_doc", ""), "detail": c.get("message", "")})
                 for v in visual_decays:
                     all_issues.append({"type": "image" if "png" in v.get("suggestion", "") else "text", "category": v.get("category", "画像修正"), "old": v.get("description", "旧画像"), "new": v.get("suggestion", "新画像"), "doc": v.get("old_doc", "")})

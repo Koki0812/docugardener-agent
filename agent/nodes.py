@@ -125,28 +125,47 @@ def compare_text_node(state: AgentState) -> dict[str, Any]:
         try:
             from services.vertex_ai_service import compare_text
             result = compare_text(source_text, doc.get("snippet", ""), feedback_context=feedback_context)
-            contradictions.append(
-                {
-                    "doc_title": doc_title,
+            # compare_text now returns a list of structured dicts
+            items = result.get("contradictions", [])
+            if isinstance(items, list):
+                for item in items:
+                    item.setdefault("old_doc", doc_title)
+                    item.setdefault("doc_id", doc.get("doc_id", ""))
+                contradictions.extend(items)
+            else:
+                # Fallback: raw string
+                contradictions.append({
+                    "old_doc": doc_title,
                     "doc_id": doc.get("doc_id", ""),
-                    "analysis": result.get("contradictions", ""),
-                }
-            )
+                    "category": "AI分析",
+                    "message": str(items)[:200],
+                    "analysis": str(items),
+                })
         except Exception as e:
             logger.warning("Gemini compare_text failed for %s: %s", doc_title, e)
-            # Fallback: generate demo contradiction
-            contradictions.append(
+            # Fallback: generate demo contradiction with structured data
+            contradictions.extend([
                 {
-                    "doc_title": doc_title,
+                    "old_doc": doc_title,
                     "doc_id": doc.get("doc_id", ""),
-                    "analysis": (
-                        f"【矛盾検出】「{doc_title}」には「右上のギアアイコンから設定画面を開く」と"
-                        "記載されていますが、最新のドキュメントでは「設定画面はサイドメニューに移動」"
-                        "とあり、ナビゲーション手順が矛盾しています。\n"
-                        "→ 修正提案: マニュアルの手順2を更新し、サイドメニューでの操作に変更してください。"
-                    ),
-                }
-            )
+                    "severity": "critical",
+                    "category": "ナビゲーション手順",
+                    "message": "設定画面への遷移方法が旧バージョンのギアアイコンのまま",
+                    "suggestion": "サイドメニューの「設定」からアクセスする手順に更新",
+                    "old_text": f"「{doc_title}」には「右上のギアアイコンから設定画面を開く」と記載されています。",
+                    "new_text": "サイドメニューの「設定」をクリックして設定画面を開いてください。（v3.0よりギアアイコンは廃止）",
+                },
+                {
+                    "old_doc": doc_title,
+                    "doc_id": doc.get("doc_id", ""),
+                    "severity": "warning",
+                    "category": "用語変更",
+                    "message": "「ダッシュボード」はv3.0で「ホーム画面」に名称変更済み",
+                    "suggestion": "全ての「ダッシュボード」を「ホーム画面」に置換",
+                    "old_text": "ログイン後、ダッシュボードが表示されます。",
+                    "new_text": "ログイン後、ホーム画面が表示されます。",
+                },
+            ])
             logs.append(f"   ⚠️ Gemini APIエラー（フォールバック結果を使用）")
 
     logs.append(f"✅ Pruning完了: {len(contradictions)} 件の矛盾を剪定")
