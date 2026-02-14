@@ -19,6 +19,8 @@ WARNING_YELLOW = RGBColor(0xFB, 0xBF, 0x24)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
 LOGO_PATH = os.path.join(PROJECT_DIR, "assets", "logo.png")
+ARCH_RUNTIME_PATH = os.path.join(PROJECT_DIR, "docs", "architecture_runtime.png")
+ARCH_DEV_PATH = os.path.join(PROJECT_DIR, "docs", "architecture_development.png")
 INFO_BLUE = RGBColor(0x60, 0xA5, 0xFA)
 
 SLIDE_W = Inches(13.333)  # 16:9
@@ -165,7 +167,104 @@ def build_presentation():
                      color=LIGHT_GRAY)
 
     # =====================================================================
-    # SLIDE 3: Architecture
+    # SLIDE 3: Runtime Architecture (image)
+    # =====================================================================
+    slide3 = prs.slides.add_slide(blank_layout)
+    set_slide_bg(slide3, DARK_BG)
+
+    add_text_box(slide3, Inches(0.8), Inches(0.3), Inches(10), Inches(0.8),
+                 "Runtime Architecture", font_size=36,
+                 color=WHITE, bold=True)
+
+    add_text_box(slide3, Inches(0.8), Inches(1.0), Inches(11), Inches(0.4),
+                 "100% Google Cloud - Serverless & Fully Managed",
+                 font_size=16, color=ACCENT_GREEN)
+
+    # Embed runtime architecture diagram
+    if os.path.exists(ARCH_RUNTIME_PATH):
+        # White background card for the diagram
+        img_bg = slide3.shapes.add_shape(
+            MSO_SHAPE.ROUNDED_RECTANGLE,
+            Inches(0.5), Inches(1.5), Inches(12.3), Inches(5.7)
+        )
+        img_bg.fill.solid()
+        img_bg.fill.fore_color.rgb = WHITE
+        img_bg.line.fill.background()
+
+        slide3.shapes.add_picture(
+            ARCH_RUNTIME_PATH,
+            Inches(0.8), Inches(1.7), Inches(11.7), Inches(5.3)
+        )
+    else:
+        add_text_box(slide3, Inches(2), Inches(3), Inches(9), Inches(1),
+                     "[architecture_runtime.png not found]",
+                     font_size=20, color=CRITICAL_RED,
+                     alignment=PP_ALIGN.CENTER)
+
+    # =====================================================================
+    # SLIDE 4: Development Architecture / Google AntiGravity
+    # =====================================================================
+    slide4_dev = prs.slides.add_slide(blank_layout)
+    set_slide_bg(slide4_dev, DARK_BG)
+
+    add_text_box(slide4_dev, Inches(0.8), Inches(0.3), Inches(10), Inches(0.8),
+                 "Development with Google AntiGravity",
+                 font_size=36, color=WHITE, bold=True)
+
+    add_text_box(slide4_dev, Inches(0.8), Inches(1.0), Inches(11), Inches(0.4),
+                 "AI-Assisted Coding for Rapid Prototyping & Production",
+                 font_size=16, color=ACCENT_GREEN)
+
+    # Embed development architecture diagram
+    if os.path.exists(ARCH_DEV_PATH):
+        # White background card for the diagram
+        img_bg2 = slide4_dev.shapes.add_shape(
+            MSO_SHAPE.ROUNDED_RECTANGLE,
+            Inches(0.3), Inches(1.5), Inches(8.0), Inches(5.7)
+        )
+        img_bg2.fill.solid()
+        img_bg2.fill.fore_color.rgb = WHITE
+        img_bg2.line.fill.background()
+
+        slide4_dev.shapes.add_picture(
+            ARCH_DEV_PATH,
+            Inches(0.5), Inches(1.7), Inches(7.5), Inches(5.3)
+        )
+    else:
+        add_text_box(slide4_dev, Inches(1), Inches(3), Inches(7), Inches(1),
+                     "[architecture_development.png not found]",
+                     font_size=20, color=CRITICAL_RED,
+                     alignment=PP_ALIGN.CENTER)
+
+    # AntiGravity highlights on the right side
+    highlights = [
+        ("AI-Assisted Coding", "AntiGravityがアーキテクチャ設計\nから実装まで支援"),
+        ("LangGraph Pipeline", "エージェントパイプラインの\n設計・実装を加速"),
+        ("Dashboard UI", "Streamlitダッシュボードの\nUI/UX構築を支援"),
+        ("Test Generation", "ユニット&E2Eテストの\n自動生成で品質確保"),
+        ("CI/CD Pipeline", "GitHub Actions →\nCloud Build → Cloud Run"),
+    ]
+
+    for i, (title, desc) in enumerate(highlights):
+        x = Inches(8.8)
+        y = Inches(1.5 + i * 1.1)
+        card = add_rounded_rect(slide4_dev, x, y, Inches(4.2), Inches(0.95),
+                                CARD_BG)
+        add_text_box(slide4_dev, x + Inches(0.2), y + Inches(0.05),
+                     Inches(3.8), Inches(0.35), title, font_size=13,
+                     color=ACCENT_BLUE, bold=True)
+        add_text_box(slide4_dev, x + Inches(0.2), y + Inches(0.4),
+                     Inches(3.8), Inches(0.5), desc, font_size=11,
+                     color=LIGHT_GRAY)
+
+    # Bottom bar
+    dev_bar = add_rounded_rect(
+        slide4_dev, Inches(0.3), Inches(7.1), Inches(12.7), Inches(0.25),
+        ACCENT_GREEN
+    )
+
+    # =====================================================================
+    # SLIDE 5: Architecture & Core Tech (pipeline detail)
     # =====================================================================
     slide3 = prs.slides.add_slide(blank_layout)
     set_slide_bg(slide3, DARK_BG)

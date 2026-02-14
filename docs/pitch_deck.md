@@ -29,21 +29,31 @@
 
 ---
 
-## 🏗️ Slide 3: アーキテクチャ
+## 🏗️ Slide 3: ランタイムアーキテクチャ
 
-```mermaid
-graph LR
-    A[GCS Bucket] -->|Eventarc| B[Cloud Run]
-    B --> C[LangGraph Agent]
-    C --> D[Gemini 2.0 Flash]
-    D --> E{分析結果}
-    E -->|テキスト矛盾| F[Firestore]
-    E -->|Visual Decay| F
-    F --> G[Streamlit Dashboard]
-    G --> H[管理者レビュー]
-```
+![Runtime Architecture](architecture_runtime.png)
 
 **100% Google Cloud ネイティブ** — サーバーレス・フルマネージド
+
+使用GCPサービス: Cloud Run, Vertex AI (Gemini 2.0 Flash), Firestore, Cloud Storage, Cloud Tasks, Pub/Sub, Cloud Logging, Secret Manager, Google Drive API, Google Docs API
+
+---
+
+## 🛠️ Slide 3.5: 開発アーキテクチャ — Google AntiGravity
+
+![Development Architecture](architecture_development.png)
+
+### Google AntiGravity による AI アシスト開発
+
+| 活用領域 | 内容 |
+|---------|------|
+| **アーキテクチャ設計** | GCPサービス構成の提案・最適化 |
+| **LangGraph 実装** | エージェントパイプライン設計・実装 |
+| **Streamlit UI** | ダッシュボードの UI/UX 構築 |
+| **テスト自動化** | ユニット & E2E テスト生成 |
+| **CI/CD** | GitHub Actions → Cloud Build → Cloud Run |
+
+**開発工数を大幅に削減** — Google Cloud エコシステムで開発から本番まで完結
 
 ---
 
@@ -167,6 +177,7 @@ sequenceDiagram
 - 🤖 **Gemini 2.0 Flash** — テキスト + 画像のマルチモーダル分析
 - 🏗️ **LangGraph** — 自律型エージェントアーキテクチャ
 - ☁️ **100% Google Cloud** — Cloud Run, Firestore, GCS, Eventarc
+- 🛠️ **Google AntiGravity** — AI アシスト開発で高速プロトタイピング
 - 📊 **即座に価値を提供** — 導入初日からドキュメント品質を改善
 
 ### 🔗 リンク

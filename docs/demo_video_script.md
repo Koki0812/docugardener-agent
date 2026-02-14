@@ -1,4 +1,4 @@
-# DocuAlign AI — デモ動画台本（3分）
+# DocuAlign AI — デモ動画台本（3分30秒）
 
 > YouTube公開 → Zenn記事に埋め込み用
 
@@ -53,7 +53,7 @@ GCSバケット内のドキュメントをGemini 2.0 Flashが自動分析しま�
 
 ## 🤖 [1:30-2:10] 技術ハイライト
 
-**画面**: アーキテクチャ図
+**画面**: ランタイムアーキテクチャ図（`docs/architecture_runtime.png`）
 
 **ナレーション**:
 「DocuAlign AIのコア技術をご説明します。
@@ -66,12 +66,30 @@ GCSバケット内のドキュメントをGemini 2.0 Flashが自動分析しま�
 スキャン→分析→結果保存を自動実行。
 
 すべて **Google Cloud** 上で動作。
-Cloud Run、Firestore、GCS、Eventarc で
+Cloud Run、Firestore、GCS、Cloud Tasks、Pub/Sub で
 サーバーレス＆フルマネージドです」
 
 ---
 
-## 📈 [2:10-2:40] ビジネス価値
+## �️ [2:10-2:40] 開発プロセス ～ Google AntiGravity ～
+
+**画面**: 開発アーキテクチャ図（`docs/architecture_development.png`）
+
+**ナレーション**:
+「開発には **Google AntiGravity** を全面的に活用しました。
+
+AntiGravity が VS Code 上で AI アシストコーディングを行い、
+アーキテクチャ設計、LangGraph パイプライン実装、
+Streamlit ダッシュボード構築、テスト作成まで —
+**開発工数を大幅に削減** しています。
+
+コードは GitHub に push され、
+Cloud Build 経由で Cloud Run に自動デプロイ。
+開発から本番まで、Google Cloud エコシステムで完結しています」
+
+---
+
+## 📈 [2:40-3:10] ビジネス価値
 
 **画面**: ROI・効果のスライド
 
@@ -86,13 +104,16 @@ Cloud Run、Firestore、GCS、Eventarc で
 
 ---
 
-## 🏁 [2:40-3:00] クロージング
+## 🏁 [3:10-3:30] クロージング
 
 **画面**: まとめスライド + GitHub URL
 
 **ナレーション**:
 「DocuAlign AI — ドキュメントの "サイレント劣化" を
 AIが自動で検知・修正提案する世界を実現します。
+
+Google AntiGravity による AI アシスト開発で、
+高品質なプロダクトを短期間で構築しました。
 
 GitHubリポジトリは公開中です。
 ぜひお試しください。ありがとうございました」
@@ -103,6 +124,18 @@ GitHubリポジトリは公開中です。
 
 - **録画ツール**: OBS Studio or Loom
 - **解像度**: 1920×1080 (16:9)
-- **対象時間**: 3分以内
+- **対象時間**: 3分30秒以内
 - **アップロード先**: YouTube（限定公開 or 公開）
 - **Zenn埋め込み**: `@[youtube](VIDEO_ID)` でOK
+
+### 使用するスライド / 素材
+
+| タイムコード | 素材 | ファイル |
+|-------------|------|---------|
+| 0:00-0:15 | タイトルスライド | `docs/demo_slides.pptx` スライド1 |
+| 0:15-0:40 | 問題提起スライド | `docs/demo_slides.pptx` スライド2 |
+| 0:40-1:30 | **ライブ操作** | Streamlit ダッシュボード |
+| 1:30-2:10 | ランタイムアーキテクチャ図 | `docs/architecture_runtime.png` |
+| 2:10-2:40 | 開発アーキテクチャ図 | `docs/architecture_development.png` |
+| 2:40-3:10 | ROIスライド | `docs/demo_slides.pptx` スライド4 |
+| 3:10-3:30 | クロージングスライド | `docs/demo_slides.pptx` スライド5 |

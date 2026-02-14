@@ -1,7 +1,7 @@
 # デモ動画 制作ガイド（0 → YouTube アップロードまで）
 
 > **所要時間目安**: 3〜5時間（素材作成 2h + 収録 1h + 編集 1h + アップロード 0.5h）
-> **完成動画**: 3分以内 / 1920×1080 / 16:9
+> **完成動画**: 3分30秒以内 / 1920×1080 / 16:9
 
 ---
 
@@ -32,13 +32,20 @@ graph LR
 色: 紺＋緑グラデーション。背景透過。512×512px」
 ```
 
-### 1-2. アーキテクチャ図
+### 1-2. アーキテクチャ図（生成済み✅）
 
-README.md の Mermaid 図を画像化する：
+以下の2つのアーキテクチャ図が `docs/` に生成済みです：
 
-1. https://mermaid.live/ を開く
-2. `README.md` のアーキテクチャ Mermaid コードを貼り付け
-3. PNG でエクスポート（1920×1080 推奨）
+| ファイル | 内容 |
+|---------|------|
+| `docs/architecture_runtime.png` | ランタイムアーキテクチャ（GCPサービス全体構成） |
+| `docs/architecture_development.png` | 開発アーキテクチャ（Google AntiGravity + CI/CD） |
+
+再生成する場合：
+```powershell
+$env:PATH = "C:\Program Files\Graphviz\bin;" + $env:PATH
+python scripts/generate_architecture.py
+```
 
 ### 1-3. BGM（任意）
 
@@ -55,13 +62,15 @@ README.md の Mermaid 図を画像化する：
 ```
 🤖 Geminiプロンプト（Google AI Ultra）:
 
-以下の台本に基づいて、Google Slidesのスライドを5枚作成してください。
+以下の台本に基づいて、Google Slidesのスライドを7枚作成してください。
 
 スライド1: タイトル「DocuAlign AI」— サブタイトル「AI-Powered Document Integrity Agent」
 スライド2: 問題提起 — 「サイレント劣化」の統計データ（3つの数字を大きく表示）
-スライド3: アーキテクチャ図の説明テキスト（Gemini 2.0 Flash, LangGraph, Cloud Run）
-スライド4: ビジネス価値（ROI: 95%削減、73%減少、480万円/年）
-スライド5: クロージング（GitHub URL + 「ありがとうございました」）
+スライド3: ランタイムアーキテクチャ図（architecture_runtime.png を使用）
+スライド4: 開発アーキテクチャ — Google AntiGravity（architecture_development.png を使用）
+スライド5: コア技術パイプライン（取得→検索→分析→画像→提案）
+スライド6: ビジネス価値（ROI: 95%削減、73%減少、480万円/年）
+スライド7: クロージング（GitHub URL + 「ありがとうございました」）
 
 デザイン: ダークテーマ、紺×緑グラデーション、モダンでプロフェッショナル
 ```
@@ -80,9 +89,11 @@ README.md の Mermaid 図を画像化する：
 |---|------|---------|
 | 1 | タイトルカード + ロゴ | 0:00-0:15 |
 | 2 | 問題提起（数字3つ） | 0:15-0:40 |
-| 3 | アーキテクチャ図 | 1:30-2:10 |
-| 4 | ROI・ビジネス価値 | 2:10-2:40 |
-| 5 | クロージング + GitHub URL | 2:40-3:00 |
+| 3 | ランタイムアーキテクチャ図 | 1:30-2:10 |
+| 4 | 開発アーキテクチャ / Google AntiGravity | 2:10-2:40 |
+| 5 | コア技術パイプライン | （補足用） |
+| 6 | ROI・ビジネス価値 | 2:40-3:10 |
+| 7 | クロージング + GitHub URL | 3:10-3:30 |
 
 ---
 
@@ -215,9 +226,10 @@ python -m streamlit run app.py
 [0:00-0:15] タイトルスライド + ナレーション①
 [0:15-0:40] 問題提起スライド + ナレーション②
 [0:40-1:30] ダッシュボード収録映像 + ナレーション③④⑤
-[1:30-2:10] アーキテクチャ図 + ナレーション⑥
-[2:10-2:40] ROIスライド + ナレーション⑦
-[2:40-3:00] クロージングスライド + ナレーション⑧
+[1:30-2:10] ランタイムアーキテクチャ図 + ナレーション⑥
+[2:10-2:40] 開発アーキテクチャ（AntiGravity）+ ナレーション⑦
+[2:40-3:10] ROIスライド + ナレーション⑧
+[3:10-3:30] クロージングスライド + ナレーション⑨
 ```
 
 5. トランジション追加:
@@ -255,9 +267,10 @@ python -m streamlit run app.py
   🔗 GitHub: https://github.com/Koki0812/docugardener-agent
   ☁️ Google Cloud: Cloud Run, Firestore, GCS, Eventarc
   🤖 AI: Gemini 2.0 Flash (Multimodal)
+  🛠️ 開発: Google AntiGravity（AI アシスト開発）
 
-  #GoogleCloud #Gemini #AI #Hackathon #LangGraph
-タグ: Google Cloud, Gemini, AI, ハッカソン, LangGraph, Document Management
+  #GoogleCloud #Gemini #AI #Hackathon #LangGraph #AntiGravity
+タグ: Google Cloud, Gemini, AI, ハッカソン, LangGraph, AntiGravity, Document Management
 カテゴリ: 科学と技術
 言語: 日本語
 サムネイル: タイトルスライドのスクリーンショット
@@ -285,10 +298,11 @@ YouTube の動画 URL から VIDEO_ID を取得して埋め込み：
 
 ## ✅ 最終チェックリスト
 
-- [ ] 動画が3分以内に収まっている
+- [ ] 動画が3分30秒以内に収まっている
 - [ ] 音声が聞き取りやすい（BGMが大きすぎない）
 - [ ] ダッシュボードの操作が見やすい
-- [ ] アーキテクチャ図のテキストが読める
+- [ ] ランタイムアーキテクチャ図のテキストが読める
+- [ ] 開発アーキテクチャ / Google AntiGravity の説明が含まれている
 - [ ] GitHub URL が画面に表示されている
 - [ ] YouTube にアップロード完了
 - [ ] Zenn 記事に `@[youtube](ID)` で埋め込み完了
