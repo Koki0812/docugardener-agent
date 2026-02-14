@@ -1,17 +1,42 @@
-"""Vertex AI Gemini service — text and multimodal comparison."""
+"""Vertex AI Gemini service — text and multimodal comparison.
+
+Optimized for Gemini 2.0 Flash:
+- Native JSON output via response_mime_type
+- Extended context window (1M+ tokens)
+- Faster inference for real-time detection
+- Multimodal image comparison
+"""
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 
 import vertexai
-from vertexai.generative_models import GenerativeModel, Part, Image
+from vertexai.generative_models import GenerativeModel, GenerationConfig, Part, Image
 
 from config.settings import GCP_PROJECT_ID, GCP_LOCATION, GEMINI_MODEL
+from utils.retry import retry_with_backoff
+from services.logging_service import log_api_call
 
 logger = logging.getLogger(__name__)
 
 _model: GenerativeModel | None = None
+
+# Gemini 2.0 Flash generation config for structured JSON output
+_json_config = GenerationConfig(
+    response_mime_type="application/json",
+    temperature=0.1,
+    top_p=0.95,
+    max_output_tokens=8192,
+)
+
+# Config for free-form text analysis (image comparison)
+_text_config = GenerationConfig(
+    temperature=0.2,
+    top_p=0.95,
+    max_output_tokens=4096,
+)
 
 
 def _get_model() -> GenerativeModel:
@@ -73,13 +98,22 @@ def compare_text(new_doc_text: str, old_doc_text: str, feedback_context: str = "
 
 ---
 【新しいドキュメント】
-{new_doc_text[:8000]}
+{new_doc_text[:16000]}
 
 ---
 【古いドキュメント】
-{old_doc_text[:8000]}
+{old_doc_text[:16000]}
 """
-    response = model.generate_content(prompt)
+    # Use Gemini 2.0 Flash native JSON output
+    start_time = time.time()
+    try:
+        response = model.generate_content(prompt, generation_config=_json_config)
+        duration_ms = (time.time() - start_time) * 1000
+        log_api_call("gemini", "compare_text", duration_ms, True)
+    except Exception as e:
+        duration_ms = (time.time() - start_time) * 1000
+        log_api_call("gemini", "compare_text", duration_ms, False, str(e))
+        raise
     raw_text = response.text
 
     # Try to parse structured JSON from Gemini response
@@ -142,7 +176,18 @@ def compare_images(old_image_bytes: bytes, new_image_bytes: bytes) -> dict[str, 
 - 影響度（高/中/低）
 - マニュアル更新の推奨事項
 """
-    response = model.generate_content([prompt, old_part, new_part])
+    start_time = time.time()
+    try:
+        response = model.generate_content(
+            [prompt, old_part, new_part],
+            generation_config=_text_config,
+        )
+        duration_ms = (time.time() - start_time) * 1000
+        log_api_call("gemini", "compare_images", duration_ms, True)
+    except Exception as e:
+        duration_ms = (time.time() - start_time) * 1000
+        log_api_call("gemini", "compare_images", duration_ms, False, str(e))
+        raise
     return {
         "visual_decay": response.text,
         "summary": "Multimodal image comparison completed",

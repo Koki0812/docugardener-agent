@@ -51,7 +51,7 @@ GCP_PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "")
 GCP_LOCATION = os.environ.get("GCP_LOCATION", "asia-northeast1")
 
 # Vertex AI
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-1.5-pro")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
 
 # Vertex AI Agent Builder (Discovery Engine)
 SEARCH_ENGINE_ID = get_secret("search-engine-id", "")
