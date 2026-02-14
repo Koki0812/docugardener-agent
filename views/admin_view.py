@@ -426,41 +426,26 @@ def render_admin_dashboard():
     # Sidebar
     with st.sidebar:
         st.title("⚙ 設定")
-        mode = st.radio("モード", ["自動モニタリング", "デモモード"])
-        is_auto = mode == "自動モニタリング"
-        if is_auto:
-            st.caption("監視対象GCSバケット:")
-            st.code("gs://hackathon4-487208-docs/")
+        st.caption("監視対象GCSバケット:")
+        st.code("gs://hackathon4-487208-docs/")
 
     # Data Loading
     firestore_connected = True
     last_update_time = None
 
-    if is_auto:
-        _poll_and_process_gcs()
-        history = _load_scan_history()
-        if "firestore_error" in st.session_state:
-            firestore_connected = False
-        scan_count = len(history)
-        last_update_time = history[0].get("triggered_at", "") if history else None
-    else:
-        # Demo logic
-        c1, c2 = st.columns([1, 4])
-        with c1:
-            if st.button("スキャン実行"):
-                with st.spinner("スキャン中..."):
-                    res = _run_agent_demo("Operations_Manual_v2.1.docx")
-                    st.session_state.agent_results = res
-                    st.session_state.scan_history.insert(0, {
-                        "file_name": "Operations_Manual_v2.1.docx",
-                        "triggered_at": datetime.now().isoformat(),
-                        "status": "completed",
-                        "contradictions": res["contradictions"],
-                        "visual_decays": res["visual_decays"]
-                    })
-        history = st.session_state.scan_history
-        scan_count = len(history)
-        last_update_time = history[0].get("triggered_at", "") if history else None
+    # "スキャン実行" button — always visible
+    c1, c2 = st.columns([1, 4])
+    with c1:
+        if st.button("スキャン実行"):
+            with st.spinner("スキャン中..."):
+                _poll_and_process_gcs()
+
+    # Load scan history from Firestore
+    history = _load_scan_history()
+    if "firestore_error" in st.session_state:
+        firestore_connected = False
+    scan_count = len(history)
+    last_update_time = history[0].get("triggered_at", "") if history else None
 
     # Stats
     auto_fixed_items = [s for s in history if categorize_scan(s) == "auto_fixed"]
@@ -487,7 +472,7 @@ def render_admin_dashboard():
             <div class="conn-info">{conn_status_html}{last_update_html}</div>
             <div class="status-badge">
                 <div class="status-dot"></div>
-                <span>{'システム稼働中' if is_auto else 'デモモード'}</span>
+                <span>システム稼働中</span>
             </div>
         </div>
     </div>
@@ -714,6 +699,3 @@ def render_admin_dashboard():
                 icon = "📕"
             st.markdown(f"""<div class="feed-item"><div style="display:flex; align-items:center; gap:12px;"><div style="font-size:1.5rem;">{icon}</div><div><div style="font-weight:600; font-size:0.9rem;">{fname}</div><div style="font-size:0.75rem; color:#86868B;">{ts}</div></div></div>{status_html}</div>""", unsafe_allow_html=True)
 
-    if is_auto:
-        time.sleep(10)
-        st.rerun()
