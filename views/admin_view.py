@@ -283,45 +283,55 @@ def categorize_scan(scan_item):
     else:
         return "auto_fixed"
 
-def calculate_health(history, review_status):
-    base_score = 100
-    penalty = 0
-    
-    # Weights based on AI-determined severity
-    severity_weights = {
-        "critical": 10,
-        "warning": 5,
-        "info": 1,
-        "unknown": 2
-    }
+def calculate_issue_stats(history, review_status):
+    """Calculate clear issue statistics for dashboard display."""
+    total_issues = 0
+    resolved_issues = 0
+    pending_critical = 0
+    pending_warning = 0
     
     for scan in history:
         scan_id = scan.get("scan_id", scan.get("id"))
-        
         c_list = scan.get("contradictions", [])
         v_list = scan.get("visual_decays", [])
         
-        # Contradictions (0 to len(c)-1)
+        # Count contradictions
         for i, issue in enumerate(c_list):
+            total_issues += 1
             issue_key = f"{scan_id}_issue_{i}"
-            # If approved or denied, it's "resolved" -> No penalty
+            
             if review_status.get(issue_key) in ["approved", "denied"]:
-                continue
-            
-            sev = issue.get("severity", "unknown").lower()
-            penalty += severity_weights.get(sev, 2)
-            
-        # Visual Decays (len(c) to len(c)+len(v)-1)
+                resolved_issues += 1
+            else:
+                # Pending issue - categorize by severity
+                sev = issue.get("severity", "unknown").lower()
+                if sev == "critical":
+                    pending_critical += 1
+                elif sev == "warning":
+                    pending_warning += 1
+        
+        # Count visual decays
         offset = len(c_list)
         for j, issue in enumerate(v_list):
+            total_issues += 1
             issue_key = f"{scan_id}_issue_{offset+j}"
-            if review_status.get(issue_key) in ["approved", "denied"]:
-                continue
             
-            sev = issue.get("severity", "unknown").lower()
-            penalty += severity_weights.get(sev, 2)
-        
-    return max(0, base_score - penalty)
+            if review_status.get(issue_key) in ["approved", "denied"]:
+                resolved_issues += 1
+            else:
+                sev = issue.get("severity", "unknown").lower()
+                if sev == "critical":
+                    pending_critical += 1
+                elif sev == "warning":
+                    pending_warning += 1
+    
+    return {
+        "total": total_issues,
+        "resolved": resolved_issues,
+        "resolved_pct": int((resolved_issues / total_issues * 100) if total_issues > 0 else 0),
+        "pending_critical": pending_critical,
+        "pending_warning": pending_warning,
+    }
 
 # ---------------------------------------------------------------------------
 # Main Render Function
@@ -455,8 +465,7 @@ def render_admin_dashboard():
     manual_alert_count = len(manual_alert_items)
     total_issues = sum(len(x.get("contradictions", [])) + len(x.get("visual_decays", [])) for x in history)
     
-    health_score = calculate_health(history, st.session_state.review_status)
-    health_color = "#30D158" if health_score >= 80 else "#FF9F0A" if health_score >= 50 else "#FF453A"
+    issue_stats = calculate_issue_stats(history, st.session_state.review_status)
 
     # Top Bar
     conn_status_html = f'<span class="conn-ok">● Firestore 接続済</span>' if firestore_connected else f'<span class="conn-err">● Firestore エラー</span>'
@@ -481,7 +490,17 @@ def render_admin_dashboard():
     # Metrics
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.markdown(f"""<div class="card"><div class="metric-lbl">ドキュメント健全性</div><div class="health-score" style="color:{health_color}">{health_score}</div><div class="health-gauge"><div class="health-fill" style="width:{health_score}%; background:{health_color};"></div></div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="card">
+            <div class="metric-lbl">検出問題数</div>
+            <div class="metric-val">{issue_stats['total']}件</div>
+            <div style="margin-top:8px; font-size:0.8rem; color:#86868B;">
+                <div style="margin-bottom:4px;">✅ 対応済: {issue_stats['resolved']}件 ({issue_stats['resolved_pct']}%)</div>
+                <div style="margin-bottom:2px;">⚠️ 未対応 (Critical): {issue_stats['pending_critical']}件</div>
+                <div>🔶 未対応 (Warning): {issue_stats['pending_warning']}件</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     with c2: st.markdown(f"""<div class="card"><div class="metric-val">{scan_count}</div><div class="metric-lbl">スキャン総数</div></div>""", unsafe_allow_html=True)
     with c3: st.markdown(f"""<div class="card" style="border-left:4px solid #30D158;"><div class="metric-val" style="color:#30D158;">{auto_fixed_count}</div><div class="metric-lbl">自動修正 (Auto-Fix)</div></div>""", unsafe_allow_html=True)
     with c4: st.markdown(f"""<div class="card" style="border-left:4px solid #FF453A;"><div class="metric-val" style="color:#FF453A;">{manual_alert_count}</div><div class="metric-lbl">要手動対応</div></div>""", unsafe_allow_html=True)
