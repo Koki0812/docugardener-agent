@@ -1,6 +1,10 @@
 import streamlit as st
+from services.logging_service import setup_logging
 from views.admin_view import render_admin_dashboard
 from views.user_view import render_user_drive
+
+# Initialize logging (must be before any other operations)
+setup_logging()
 
 # Page Configuration (Must be first)
 st.set_page_config(

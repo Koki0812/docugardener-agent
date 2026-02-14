@@ -470,6 +470,109 @@ def calculate_issue_stats(history, review_status):
     }
 
 # ---------------------------------------------------------------------------
+# Onboarding Flow
+# ---------------------------------------------------------------------------
+def _show_onboarding():
+    """Display interactive onboarding tutorial for first-time users."""
+    step = st.session_state.get("onboarding_step", 1)
+    
+    # Progress indicator
+    steps_label = ["スキャン実行", "問題の確認", "承認 / 却下"]
+    progress_html = ""
+    for i, label in enumerate(steps_label, 1):
+        if i < step:
+            progress_html += f'<span style="color:#30D158;font-weight:600;">✅ {label}</span>'
+        elif i == step:
+            progress_html += f'<span style="color:#5E5CE6;font-weight:700;">▶ {label}</span>'
+        else:
+            progress_html += f'<span style="color:#86868B;">{label}</span>'
+        if i < len(steps_label):
+            progress_html += ' → '
+    
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg,#E8F5E9,#E3F2FD); padding:24px 32px; border-radius:16px; margin-bottom:24px;">
+        <h2 style="margin:0 0 8px 0;">👋 DocuAlign AI へようこそ！</h2>
+        <p style="color:#555; margin:0 0 16px 0;">AI によるドキュメント矛盾検出システムの使い方を 3 ステップでご紹介します。</p>
+        <div style="font-size:0.9rem;">{progress_html}</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if step == 1:
+        st.info("""
+        ### 📡 Step 1: スキャン実行
+        
+        サイドバー右上の **「スキャン実行」** ボタンをクリックすると、GCS バケット内のドキュメントを自動分析します。
+        
+        **AI が検出するもの**:
+        - 📝 新旧ドキュメント間のテキスト矛盾
+        - 🖼️ 古いスクリーンショット（Visual Decay）
+        - ⚠️ セキュリティポリシー違反
+        - 🔗 古い API エンドポイント参照
+        """)
+        col1, col2 = st.columns([1, 5])
+        with col1:
+            if st.button("次へ →", key="onboard_next_1"):
+                st.session_state.onboarding_step = 2
+                st.rerun()
+        with col2:
+            if st.button("スキップ", key="onboard_skip_1"):
+                st.session_state.onboarding_completed = True
+                st.rerun()
+    
+    elif step == 2:
+        st.info("""
+        ### 🔍 Step 2: 問題の確認
+        
+        検出された問題は **重要度** によって分類されます:
+        
+        | アイコン | 重要度 | 説明 |
+        |:---:|:---:|---|
+        | 🔴 | **Critical** | セキュリティや正確性に影響する重大な矛盾 |
+        | 🟡 | **Warning** | 更新推奨だが緊急ではない差異 |
+        | 🔵 | **Info** | 軽微な用語変更など情報提供 |
+        
+        各問題カードで「旧テキスト」→「新テキスト」の差分を確認できます。
+        """)
+        col1, col2, col3 = st.columns([1, 1, 4])
+        with col1:
+            if st.button("← 戻る", key="onboard_back_2"):
+                st.session_state.onboarding_step = 1
+                st.rerun()
+        with col2:
+            if st.button("次へ →", key="onboard_next_2"):
+                st.session_state.onboarding_step = 3
+                st.rerun()
+        with col3:
+            if st.button("スキップ", key="onboard_skip_2"):
+                st.session_state.onboarding_completed = True
+                st.rerun()
+    
+    elif step == 3:
+        st.success("""
+        ### ✅ Step 3: 承認 / 却下
+        
+        各問題に対してアクションを選択してください:
+        
+        - ✅ **承認**: AI の修正提案を採用（自動的に記録）
+        - ❌ **却下**: 問題なしと判断（却下理由を入力可能）
+        
+        対応済みの問題はダッシュボード上で「対応済」としてカウントされます。
+        
+        **💡 ヒント**: サイドバーの「📖 チュートリアルを再表示」ボタンで、いつでもこのガイドに戻れます。
+        """)
+        col1, col2 = st.columns([1, 5])
+        with col1:
+            if st.button("← 戻る", key="onboard_back_3"):
+                st.session_state.onboarding_step = 2
+                st.rerun()
+        with col2:
+            if st.button("🚀 チュートリアル完了！", key="onboard_done"):
+                st.session_state.onboarding_completed = True
+                st.rerun()
+    
+    st.divider()
+
+# ---------------------------------------------------------------------------
 # Main Render Function
 # ---------------------------------------------------------------------------
 def render_admin_dashboard():
@@ -482,6 +585,8 @@ def render_admin_dashboard():
         ("last_refresh", None),
         ("review_status", {}),
         ("review_reasons", {}),
+        ("onboarding_completed", False),
+        ("onboarding_step", 1),
     ]:
         if key not in st.session_state:
             st.session_state[key] = default
@@ -569,11 +674,20 @@ def render_admin_dashboard():
     </style>
     """, unsafe_allow_html=True)
 
+    # ─── Onboarding Flow ───
+    if not st.session_state.onboarding_completed:
+        _show_onboarding()
+    
     # Sidebar
     with st.sidebar:
         st.title("⚙ 設定")
         st.caption("監視対象GCSバケット:")
         st.code("gs://hackathon4-487208-docs/")
+        st.divider()
+        if st.button("📖 チュートリアルを再表示"):
+            st.session_state.onboarding_completed = False
+            st.session_state.onboarding_step = 1
+            st.rerun()
 
     # Data Loading
     firestore_connected = True
