@@ -20,6 +20,17 @@ def render_user_drive():
     }
     .file-icon { font-size: 1.2rem; }
     .file-name { font-weight: 500; font-size: 0.9rem; }
+    .ai-badge {
+        display: inline-flex; align-items: center; gap: 4px;
+        background: linear-gradient(135deg, #E8F5E9, #C8E6C9); color: #2E7D32;
+        font-size: 0.7rem; font-weight: 700; padding: 3px 8px;
+        border-radius: 12px; border: 1px solid #A5D6A7;
+        white-space: nowrap;
+    }
+    .file-row-modified {
+        border-left: 3px solid #30D158 !important;
+        background: #F0FFF4 !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -27,6 +38,18 @@ def render_user_drive():
         st.session_state["current_path"] = ""
 
     current_path = st.session_state["current_path"]
+
+    # Load AI-modified file names from Firestore scan history
+    ai_modified_files = set()
+    try:
+        from services.firestore_service import get_latest_results
+        scan_results = get_latest_results(limit=50)
+        for scan in scan_results:
+            fname = scan.get("file_name", "")
+            if fname:
+                ai_modified_files.add(fname)
+    except Exception:
+        pass  # Firestore unavailable — skip badge display
 
     # Header
     st.markdown('<div class="drive-header">📂 マイドライブ</div>', unsafe_allow_html=True)
@@ -103,14 +126,22 @@ def render_user_drive():
     for file in files:
         name = file.name.replace(current_path, "")
         if not name: continue
-        if name.endswith("/"): continue 
+        if name.endswith("/"): continue
+
+        is_ai_modified = file.name in ai_modified_files
 
         with st.container():
+            if is_ai_modified:
+                st.markdown('<div class="file-row-modified" style="padding:8px 12px; border-radius:8px; margin-bottom:4px;">', unsafe_allow_html=True)
+
             c1, c2, c3 = st.columns([0.05, 0.7, 0.25])
             with c1:
                 st.write("📄")
             with c2:
-                st.write(name)
+                if is_ai_modified:
+                    st.markdown(f'{name} <span class="ai-badge">🤖 AI修正済</span>', unsafe_allow_html=True)
+                else:
+                    st.write(name)
             with c3:
                 dl_key = f"dl_ready_{file.name}"
                 if dl_key not in st.session_state:
@@ -131,4 +162,7 @@ def render_user_drive():
                         if st.button("✕", key=f"btn_cancel_{file.name}"):
                             del st.session_state[dl_key]
                             st.rerun()
+
+            if is_ai_modified:
+                st.markdown('</div>', unsafe_allow_html=True)
             st.divider()
