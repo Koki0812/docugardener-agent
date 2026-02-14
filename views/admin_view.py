@@ -16,6 +16,27 @@ def _load_scan_history() -> list[dict]:
         st.session_state["firestore_error"] = str(e)
         return []
 
+def _save_review_feedback(scan_id: str, issue_key: str, decision: str, reason: str, issue: dict):
+    """Save review feedback to Firestore for AI learning."""
+    from datetime import datetime, timezone
+    feedback = {
+        "scan_id": scan_id,
+        "issue_key": issue_key,
+        "decision": decision,
+        "reason": reason,
+        "issue_category": issue.get("category", ""),
+        "issue_detail": issue.get("old", ""),
+        "issue_suggestion": issue.get("new", ""),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        from services.firestore_service import save_review_feedback
+        save_review_feedback(feedback)
+    except Exception as e:
+        logging.warning(f"Feedback save failed: {e}")
+    # Also store reason in session state for display
+    st.session_state.review_reasons[issue_key] = reason
+
 # ---------------------------------------------------------------------------
 # Demo helper
 # ---------------------------------------------------------------------------
@@ -123,24 +144,7 @@ def _run_agent_demo(doc_id: str) -> dict[str, Any]:
 # GCS Polling
 # ---------------------------------------------------------------------------
 def _poll_and_process_gcs():
-# ... (omitted) ...
-
-# ... (inside render_admin_dashboard function) ...
-
-    with st.expander("ℹ️ ドキュメント健全性スコアについて"):
-        st.markdown("""
-        **健全性スコア (Gemini 1.5 Pro 分析)**
-        
-        ドキュメントリポジトリの「信頼度」を 100点満点で評価します。AIが検出した問題に応じて減点されます：
-        
-        *   **重大な事実矛盾 (-10点)**: ドキュメント間で記述が食い違っている場合 (例: 仕様書AとBでアイコンの記述が異なる)。
-        *   **視覚的陳腐化 (-5点)**: スクリーンショットが現在の実際の製品UIと一致しない場合 (Gemini Visionによる判定)。
-        *   **用語・スタイルの不統一 (-3点)**: 社内スタイルガイドとの不整合。
-        *   **要手動レビュー (-10点)**: PDFなど、自動修正フローに乗せられないファイル。
-        
-        *AIは「庭師」としてこれらの問題を剪定し、常に健全性を100に保つよう支援します。*
-        """)
-    """Check GCS bucket for unprocessed files and run the agent pipeline."""
+    """GCSバケットの未処理ファイルを検出し、エージェントパイプラインを実行する。"""
     try:
         from google.cloud import storage
         from services.firestore_service import save_scan_result, get_latest_results
@@ -255,10 +259,6 @@ def calculate_health(history, review_status):
         
     return max(0, base_score - penalty)
 
-# ... (omitted) ...
-
-
-
 # ---------------------------------------------------------------------------
 # Main Render Function
 # ---------------------------------------------------------------------------
@@ -271,6 +271,7 @@ def render_admin_dashboard():
         ("scan_history", []),
         ("last_refresh", None),
         ("review_status", {}),
+        ("review_reasons", {}),
     ]:
         if key not in st.session_state:
             st.session_state[key] = default
@@ -307,7 +308,7 @@ def render_admin_dashboard():
     header[data-testid="stHeader"] { background: transparent !important; }
     div[data-testid="stDecoration"] { display: none; }
     div[data-testid="stStatusWidget"] { display: none; }
-    button[data-testid="baseButton-headerNoPadding"] { display: none; } /* Specific buttons if needed */
+    button[data-testid="baseButton-headerNoPadding"] { display: none; }
     
     .top-bar {
         display: flex; align-items: center; justify-content: space-between;
@@ -360,11 +361,11 @@ def render_admin_dashboard():
 
     # Sidebar
     with st.sidebar:
-        st.title("Settings")
-        mode = st.radio("Mode", ["Auto Monitoring", "Demo Mode"])
-        is_auto = mode == "Auto Monitoring"
+        st.title("⚙ 設定")
+        mode = st.radio("モード", ["自動モニタリング", "デモモード"])
+        is_auto = mode == "自動モニタリング"
         if is_auto:
-            st.caption("Monitoring GCS Bucket:")
+            st.caption("監視対象GCSバケット:")
             st.code("gs://hackathon4-487208-docs/")
 
     # Data Loading
@@ -382,8 +383,8 @@ def render_admin_dashboard():
         # Demo logic
         c1, c2 = st.columns([1, 4])
         with c1:
-            if st.button("Trigger Scan"):
-                with st.spinner("Scanning..."):
+            if st.button("スキャン実行"):
+                with st.spinner("スキャン中..."):
                     res = _run_agent_demo("Operations_Manual_v2.1.docx")
                     st.session_state.agent_results = res
                     st.session_state.scan_history.insert(0, {
@@ -409,7 +410,7 @@ def render_admin_dashboard():
     health_color = "#30D158" if health_score >= 80 else "#FF9F0A" if health_score >= 50 else "#FF453A"
 
     # Top Bar
-    conn_status_html = f'<span class="conn-ok">● Firestore Connected</span>' if firestore_connected else f'<span class="conn-err">● Firestore Error</span>'
+    conn_status_html = f'<span class="conn-ok">● Firestore 接続済</span>' if firestore_connected else f'<span class="conn-err">● Firestore エラー</span>'
     last_update_html = f'<span style="margin-left:16px;">最終更新: {last_update_time[:16] if last_update_time else "N/A"}</span>' if last_update_time else ''
     
     st.markdown(f"""
@@ -422,7 +423,7 @@ def render_admin_dashboard():
             <div class="conn-info">{conn_status_html}{last_update_html}</div>
             <div class="status-badge">
                 <div class="status-dot"></div>
-                <span>{'SYSTEM ONLINE' if is_auto else 'DEMO MODE'}</span>
+                <span>{'システム稼働中' if is_auto else 'デモモード'}</span>
             </div>
         </div>
     </div>
@@ -436,32 +437,18 @@ def render_admin_dashboard():
     with c3: st.markdown(f"""<div class="card" style="border-left:4px solid #30D158;"><div class="metric-val" style="color:#30D158;">{auto_fixed_count}</div><div class="metric-lbl">自動修正 (Auto-Fix)</div></div>""", unsafe_allow_html=True)
     with c4: st.markdown(f"""<div class="card" style="border-left:4px solid #FF453A;"><div class="metric-val" style="color:#FF453A;">{manual_alert_count}</div><div class="metric-lbl">要手動対応</div></div>""", unsafe_allow_html=True)
 
-    with st.expander("ℹ️ About Document Health Score"):
-        st.markdown("""
-        **Health Score Algorithm (Powered by Gemini 1.5 Pro)**
-        
-        The score represents the trustworthiness of your documentation repository. It starts at **100** and is penalized by AI-detected issues:
-        
-        *   **Critical Contradictions (-10 pts)**: Gemini detects conflicts between documents (e.g., "Settings icon is gear" vs "Settings icon is profile").
-        *   **Visual Decay (-5 pts)**: Gemini Vision detects screenshots that no longer match the live product UI.
-        *   **Terminology/Style (-3 pts)**: Inconsistencies with the corporate style guide.
-        *   **Manual Review Required (-10 pts)**: Non-editable files (PDFs) that block auto-fix workflows.
-        
-        *AI acts as the "Gardener", pruning these issues to restore Health to 100.*
-        """)
-
     st.markdown("<br>", unsafe_allow_html=True)
 
     # Results
     col_left, col_right = st.columns([3, 2])
     
     with col_left:
-        st.subheader("Auto-Fixed Documents")
+        st.subheader("自動修正ドキュメント")
         if not auto_fixed_items:
-            st.info("No documents.")
+            st.info("ドキュメントはありません。")
         else:
             for idx, item in enumerate(auto_fixed_items[:5]):
-                fname = item.get("file_name", "Unknown")
+                fname = item.get("file_name", "不明")
                 scan_id = item.get("scan_id", item.get("id", f"item_{idx}"))
                 
                 # Combine issues logic
@@ -469,13 +456,13 @@ def render_admin_dashboard():
                 visual_decays = item.get("visual_decays", [])
                 all_issues = []
                 for c in contradictions:
-                    all_issues.append({"type": "text", "category": c.get("category", "Text Fix"), "old": c.get("message", "Original"), "new": c.get("suggestion", "Corrected"), "doc": c.get("old_doc", "")})
+                    all_issues.append({"type": "text", "category": c.get("category", "テキスト修正"), "old": c.get("message", "元のテキスト"), "new": c.get("suggestion", "修正後"), "doc": c.get("old_doc", "")})
                 for v in visual_decays:
-                    all_issues.append({"type": "image" if "png" in v.get("suggestion", "") else "text", "category": v.get("category", "Visual Fix"), "old": v.get("description", "Old Image"), "new": v.get("suggestion", "New Image"), "doc": v.get("old_doc", "")})
+                    all_issues.append({"type": "image" if "png" in v.get("suggestion", "") else "text", "category": v.get("category", "画像修正"), "old": v.get("description", "旧画像"), "new": v.get("suggestion", "新画像"), "doc": v.get("old_doc", "")})
                 
                 n_issues = len(all_issues)
                 
-                # Review Status Logic from before
+                # Review Status Logic
                 approved_count = 0
                 denied_count = 0
                 for i in range(n_issues):
@@ -485,101 +472,117 @@ def render_admin_dashboard():
                     if status == "denied": denied_count += 1
                 
                 if approved_count + denied_count == 0:
-                    status_icon, status_text = "⚪", "Pending Review"
+                    status_icon, status_text = "⚪", "レビュー待ち"
                 elif approved_count + denied_count == n_issues:
-                    if denied_count > 0: status_icon, status_text = "🔴", "Review Completed (Some Denied)"
-                    else: status_icon, status_text = "🟢", "Fully Approved"
+                    if denied_count > 0: status_icon, status_text = "🔴", "レビュー完了 (一部却下)"
+                    else: status_icon, status_text = "🟢", "全件承認済"
                 else:
-                    status_icon, status_text = "🟡", f"In Progress ({approved_count + denied_count}/{n_issues})"
+                    status_icon, status_text = "🟡", f"レビュー中 ({approved_count + denied_count}/{n_issues})"
 
                 # Expander
                 if "expanded_scans" not in st.session_state: st.session_state.expanded_scans = set()
                 is_expanded = scan_id in st.session_state.expanded_scans
                 
                 with st.expander(f"{status_icon} {fname} — {status_text}", expanded=is_expanded):
-                    st.markdown(f"<div style='margin-bottom:12px; font-size:0.9rem; color:#666;'>Found {n_issues} issues.</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='margin-bottom:12px; font-size:0.9rem; color:#666;'>{n_issues} 件の問題を検出</div>", unsafe_allow_html=True)
                     for i, issue in enumerate(all_issues):
                         issue_key = f"{scan_id}_issue_{i}"
                         status = st.session_state.review_status.get(issue_key, None)
                         
-                        # Render Issue Card (Simplified copy for brevity in this extraction, 
-                        # but real code has full styling)
                         if status == "approved":
-                            status_html = '<span class="status-icon-approved">✅ APPROVED</span>'
+                            status_html = '<span class="status-icon-approved">✅ 承認済</span>'
                             bg_style = "border: 1px solid #30D158; background: #F0FFF4;"
                         elif status == "denied":
-                            status_html = '<span class="status-icon-denied">❌ DENIED</span>'
+                            status_html = '<span class="status-icon-denied">❌ 却下</span>'
                             bg_style = "border: 1px solid #FF453A; background: #FFF0F0;"
                         else:
-                            status_html = '<span class="status-icon-pending">⏳ PENDING</span>'
+                            status_html = '<span class="status-icon-pending">⏳ 未承認</span>'
                             bg_style = "border: 1px solid #EEE;"
 
                         st.markdown(f"""
                         <div style="{bg_style} border-radius:8px; padding:12px; margin-bottom:0px;">
                             <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                                <span style="font-weight:bold; font-size:0.85rem;">Issue {i+1}: {issue['category']}</span>
+                                <span style="font-weight:bold; font-size:0.85rem;">問題 {i+1}: {issue['category']}</span>
                                 {status_html}
                             </div>
                         """, unsafe_allow_html=True)
 
                         old_content = f'<span class="diff-del">{issue["old"]}</span>'
                         if issue['type'] == 'image':
-                            new_content = f'<div style="color:#30D158; font-weight:bold; margin-bottom:4px;">✅ Replaced with:</div><img src="{issue["new"]}" width="100%" style="border-radius:4px; border:2px solid #30D158;">'
-                            if "http" not in issue["new"]: new_content = f'<span class="diff-add">🖼️ Image Replacement: {issue["new"]}</span>'
+                            new_content = f'<div style="color:#30D158; font-weight:bold; margin-bottom:4px;">✅ 差し替え画像:</div><img src="{issue["new"]}" width="100%" style="border-radius:4px; border:2px solid #30D158;">'
+                            if "http" not in issue["new"]: new_content = f'<span class="diff-add">🖼️ 画像差し替え: {issue["new"]}</span>'
                         else:
                             new_content = f'<span class="diff-add">{issue["new"]}</span>'
 
                         st.markdown(f"""
                             <div class="diff-container" style="margin:0;">
                                 <div class="diff-panel diff-panel-old">
-                                    <span class="diff-label" style="color:#FF453A;">Before</span>
+                                    <span class="diff-label" style="color:#FF453A;">修正前</span>
                                     <div>{old_content}</div>
                                 </div>
                                 <div class="diff-panel diff-panel-new">
-                                    <span class="diff-label" style="color:#30D158;">After</span>
+                                    <span class="diff-label" style="color:#30D158;">修正後</span>
                                     <div>{new_content}</div>
                                 </div>
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
 
-                        # Spacing & Buttons
+                        # Spacing & Reason Input
                         st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+
+                        if status is not None:
+                            # Already reviewed — show saved reason
+                            saved_reason = st.session_state.review_reasons.get(issue_key, "")
+                            if saved_reason:
+                                st.markdown(f"<div style='font-size:0.8rem; color:#86868B; margin-bottom:8px;'>💬 理由: {saved_reason}</div>", unsafe_allow_html=True)
+                        else:
+                            # Pending — show reason input + buttons
+                            reason = st.text_input(
+                                "選択理由（任意 — AIの学習に活用されます）",
+                                key=f"reason_{issue_key}",
+                                placeholder="例: この用語は社内基準で正しいため変更不要",
+                            )
+
                         b1, b2, _ = st.columns([0.15, 0.15, 0.7])
                         with b1:
-                            if st.button("Approve", key=f"app_{issue_key}", type="primary" if status is None else "secondary"):
+                            if st.button("承認", key=f"app_{issue_key}", type="primary" if status is None else "secondary"):
+                                entered_reason = st.session_state.get(f"reason_{issue_key}", "")
                                 st.session_state.review_status[issue_key] = "approved"
+                                _save_review_feedback(scan_id, issue_key, "approved", entered_reason, issue)
                                 st.session_state.expanded_scans.add(scan_id)
                                 st.rerun()
                         with b2:
-                            if st.button("Deny", key=f"den_{issue_key}"):
+                            if st.button("却下", key=f"den_{issue_key}"):
+                                entered_reason = st.session_state.get(f"reason_{issue_key}", "")
                                 st.session_state.review_status[issue_key] = "denied"
+                                _save_review_feedback(scan_id, issue_key, "denied", entered_reason, issue)
                                 st.session_state.expanded_scans.add(scan_id)
                                 st.rerun()
                         st.markdown("<hr style='margin-top: 16px; margin-bottom: 16px; opacity: 0.3;'>", unsafe_allow_html=True)
 
     with col_right:
-        st.subheader("⚠ Manual Action Required")
+        st.subheader("⚠ 要手動対応")
         if not manual_alert_items:
-            st.success("No manual alerts.")
+            st.success("手動対応の必要はありません。")
         else:
             for item in manual_alert_items[:5]:
-                fname = item.get("file_name", "Unknown")
+                fname = item.get("file_name", "不明")
                 n_issues = len(item.get("contradictions", [])) + len(item.get("visual_decays", []))
-                st.markdown(f"""<div class="alert-card"><span class="alert-badge">MANUAL ACTION</span><div class="rc-title" style="color:#D92D20;">{fname}</div><div class="rc-desc">{n_issues} conflicts found.</div></div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div class="alert-card"><span class="alert-badge">要手動対応</span><div class="rc-title" style="color:#D92D20;">{fname}</div><div class="rc-desc">{n_issues} 件の矛盾を検出</div></div>""", unsafe_allow_html=True)
     
     # Activity Feed
-    st.subheader("Recent Activity Stream")
+    st.subheader("最近のアクティビティ")
     if history:
         for act in history[:5]:
-            fname = act.get("file_name", "Unknown File")
+            fname = act.get("file_name", "不明なファイル")
             ts = act.get("triggered_at", "")[:16].replace("T", " ")
             category = categorize_scan(act)
             if category == "auto_fixed":
-                status_html = '<span style="color:#30D158; font-weight:600;">✓ Auto-Fixed</span>'
+                status_html = '<span style="color:#30D158; font-weight:600;">✓ 自動修正済</span>'
                 icon = "📄"
             else:
-                status_html = '<span style="color:#FF453A; font-weight:600;">⚠ Manual Required</span>'
+                status_html = '<span style="color:#FF453A; font-weight:600;">⚠ 要手動対応</span>'
                 icon = "📕"
             st.markdown(f"""<div class="feed-item"><div style="display:flex; align-items:center; gap:12px;"><div style="font-size:1.5rem;">{icon}</div><div><div style="font-weight:600; font-size:0.9rem;">{fname}</div><div style="font-size:0.75rem; color:#86868B;">{ts}</div></div></div>{status_html}</div>""", unsafe_allow_html=True)
 

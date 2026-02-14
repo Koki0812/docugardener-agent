@@ -1,12 +1,12 @@
 """
-Firestore service for DocuGardener Agent.
+Firestore service for DocuAlign AI.
 Stores and retrieves scan results for the dashboard.
 """
 import logging
 from datetime import datetime, timezone
 from typing import Any
 
-logger = logging.getLogger("docugardener.firestore")
+logger = logging.getLogger("docualign.firestore")
 
 COLLECTION = "scan_results"
 
@@ -100,3 +100,64 @@ def get_scan_result(scan_id: str) -> dict[str, Any] | None:
     except Exception as e:
         logger.error(f"❌ Firestore get error: {e}")
         return None
+
+
+# ---------------------------------------------------------------------------
+# Review Feedback (AI Learning Loop)
+# ---------------------------------------------------------------------------
+
+FEEDBACK_COLLECTION = "review_feedback"
+
+
+def save_review_feedback(feedback: dict[str, Any]) -> str | None:
+    """Save a review feedback entry to Firestore.
+
+    Args:
+        feedback: Dict with scan_id, issue_key, decision, reason,
+                  issue_category, issue_detail, timestamp.
+
+    Returns:
+        Document ID if saved, None on error.
+    """
+    client = _get_client()
+    if not client:
+        logger.warning("⚠️ Firestore unavailable — feedback not saved")
+        return None
+
+    doc_id = feedback.get("issue_key", f"fb_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}")
+
+    try:
+        doc_ref = client.collection(FEEDBACK_COLLECTION).document(doc_id)
+        doc_ref.set(feedback)
+        logger.info(f"✅ Saved review feedback: {doc_id}")
+        return doc_id
+    except Exception as e:
+        logger.error(f"❌ Firestore feedback save error: {e}")
+        return None
+
+
+def get_recent_feedback(limit: int = 20) -> list[dict[str, Any]]:
+    """Retrieve recent review feedback for AI prompt enrichment.
+
+    Args:
+        limit: Maximum number of feedback entries to return.
+
+    Returns:
+        List of feedback dicts, newest first.
+    """
+    client = _get_client()
+    if not client:
+        logger.warning("⚠️ Firestore unavailable — returning empty feedback")
+        return []
+
+    try:
+        docs = (
+            client.collection(FEEDBACK_COLLECTION)
+            .order_by("timestamp", direction="DESCENDING")
+            .limit(limit)
+            .stream()
+        )
+        return [doc.to_dict() for doc in docs]
+    except Exception as e:
+        logger.error(f"❌ Firestore feedback query error: {e}")
+        return []

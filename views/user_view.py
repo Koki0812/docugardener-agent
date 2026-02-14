@@ -29,65 +29,54 @@ def render_user_drive():
     current_path = st.session_state["current_path"]
 
     # Header
-    st.markdown('<div class="drive-header">📂 My Drive</div>', unsafe_allow_html=True)
+    st.markdown('<div class="drive-header">📂 マイドライブ</div>', unsafe_allow_html=True)
 
     # GCS Client
     try:
         client = storage.Client()
         bucket = client.bucket(GCS_BUCKET)
     except Exception as e:
-        st.error(f"Failed to connect to GCS: {e}")
+        st.error(f"GCS接続エラー: {e}")
         return
 
     # Breadcrumbs & Navigation
     col_nav, col_action = st.columns([3, 1])
     with col_nav:
         if current_path:
-            if st.button("⬅ Back", key="nav_back"):
-                # Go up one level
-                if "/" in current_path.rstrip("/"):
-                    parent = current_path.rstrip("/").rsplit("/", 2)[0] + "/"
-                    if parent == "/": parent = ""
-                    # Actually rsuffix logic is tricky. 
-                    # "foo/bar/" -> rstrip -> "foo/bar" -> rsplit -> ["foo", "bar"] -> parent "foo/"
-                    parts = current_path.rstrip("/").split("/")
-                    if len(parts) > 1:
-                        st.session_state["current_path"] = "/".join(parts[:-1]) + "/"
-                    else:
-                        st.session_state["current_path"] = ""
+            if st.button("⬅ 戻る", key="nav_back"):
+                parts = current_path.rstrip("/").split("/")
+                if len(parts) > 1:
+                    st.session_state["current_path"] = "/".join(parts[:-1]) + "/"
                 else:
                     st.session_state["current_path"] = ""
                 st.rerun()
-            st.caption(f"Location: Home / {current_path}")
+            st.caption(f"場所: ホーム / {current_path}")
         else:
-            st.caption("Location: Home /")
+            st.caption("場所: ホーム /")
 
     with col_action:
-        with st.popover("➕ New Folder"):
-            new_folder_name = st.text_input("Folder Name")
-            if st.button("Create"):
+        with st.popover("➕ 新規フォルダ"):
+            new_folder_name = st.text_input("フォルダ名")
+            if st.button("作成"):
                 if new_folder_name:
                     clean_name = new_folder_name.strip().replace("/", "_")
                     blob = bucket.blob(f"{current_path}{clean_name}/")
                     blob.upload_from_string("")
-                    st.toast(f"Folder '{clean_name}' created!")
+                    st.toast(f"フォルダ「{clean_name}」を作成しました")
                     st.rerun()
 
     st.markdown("---")
 
     # List Blobs
-    # Note: listing with delimiter populates prefixes
     blobs_iter = bucket.list_blobs(prefix=current_path, delimiter="/")
-    files = list(blobs_iter) # Consume iterator
-    folders = list(blobs_iter.prefixes) # Now prefixes is populated
+    files = list(blobs_iter)
+    folders = list(blobs_iter.prefixes)
 
     # Display Folders
     if folders:
-        st.subheader("Folders")
+        st.subheader("フォルダ")
         cols = st.columns(4)
         for i, folder in enumerate(folders):
-            # folder is full prefix e.g. "path/to/folder/"
-            # we want display name "folder"
             folder_name = folder.rstrip("/").split("/")[-1]
             with cols[i % 4]:
                 if st.button(f"📁 {folder_name}", key=f"folder_{folder}"):
@@ -95,30 +84,25 @@ def render_user_drive():
                     st.rerun()
 
     # Display Files
-    st.subheader("Files")
+    st.subheader("ファイル")
     
     # Upload Zone
-    uploaded_file = st.file_uploader("Upload File", label_visibility="collapsed")
+    uploaded_file = st.file_uploader("ファイルアップロード", label_visibility="collapsed")
     if uploaded_file:
-        # Check if already uploaded in this session to avoid loop?
-        # Streamlit file uploader preserves state.
-        # We need to perform action and then maybe clear? 
-        # Or just upload.
         blob_path = f"{current_path}{uploaded_file.name}"
         blob = bucket.blob(blob_path)
-        # Check exists?
         if not blob.exists():
             blob.upload_from_string(uploaded_file.getvalue(), content_type=uploaded_file.type)
-            st.toast(f"Uploaded {uploaded_file.name}")
-            time.sleep(1) # Wait for consistency
+            st.toast(f"「{uploaded_file.name}」をアップロードしました")
+            time.sleep(1)
             st.rerun()
 
     if not files and not folders:
-        st.info("This folder is empty.")
+        st.info("このフォルダは空です。")
 
     for file in files:
         name = file.name.replace(current_path, "")
-        if not name: continue # Skip the placeholder itself
+        if not name: continue
         if name.endswith("/"): continue 
 
         with st.container():
@@ -128,24 +112,23 @@ def render_user_drive():
             with c2:
                 st.write(name)
             with c3:
-                # 2-step Download Logic
                 dl_key = f"dl_ready_{file.name}"
                 if dl_key not in st.session_state:
-                    if st.button("Download", key=f"btn_load_{file.name}"):
+                    if st.button("ダウンロード", key=f"btn_load_{file.name}"):
                         st.session_state[dl_key] = file.download_as_bytes()
                         st.rerun()
                 else:
                     c_dl, c_cancel = st.columns([1, 1])
                     with c_dl:
                         st.download_button(
-                            label="Save",
+                            label="保存",
                             data=st.session_state[dl_key],
                             file_name=name,
                             mime=file.content_type,
                             key=f"btn_save_{file.name}"
                         )
                     with c_cancel:
-                        if st.button("X", key=f"btn_cancel_{file.name}"):
+                        if st.button("✕", key=f"btn_cancel_{file.name}"):
                             del st.session_state[dl_key]
                             st.rerun()
             st.divider()

@@ -1,11 +1,11 @@
-"""DocuGardener Agent state definition for LangGraph."""
+"""DocuAlign AI — LangGraph state definition."""
 from __future__ import annotations
 
 from typing import Any, TypedDict
 
 
 class AgentState(TypedDict, total=False):
-    """State that flows through the DocuGardener LangGraph pipeline.
+    """State that flows through the DocuAlign AI LangGraph pipeline.
 
     Nodes read and write to this shared state dict.
     """
@@ -26,6 +26,7 @@ class AgentState(TypedDict, total=False):
     # ── Action outputs ─────────────────────────────────────────────────
     suggestions: list[dict[str, Any]]      # Suggested edits / comments posted
     comments_posted: int                   # Count of comments added
+    feedback_context: str                  # Past reviewer feedback for AI learning
 
     # ── Observability ──────────────────────────────────────────────────
     logs: list[str]               # Step-by-step log for the Streamlit UI

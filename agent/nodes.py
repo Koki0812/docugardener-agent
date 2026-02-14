@@ -1,4 +1,4 @@
-"""DocuGardener Agent — LangGraph node implementations."""
+"""DocuAlign AI — LangGraph node implementations."""
 from __future__ import annotations
 
 import logging
@@ -81,7 +81,10 @@ def search_related(state: AgentState) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def compare_text_node(state: AgentState) -> dict[str, Any]:
-    """Semantic Pruning — Compare source doc with related docs for contradictions."""
+    """Semantic Pruning — Compare source doc with related docs for contradictions.
+
+    Loads past reviewer feedback from Firestore to improve Gemini accuracy.
+    """
     source_text = state.get("source_text", "")
     related_docs = state.get("related_docs", [])
     logs = list(state.get("logs", []))
@@ -91,6 +94,28 @@ def compare_text_node(state: AgentState) -> dict[str, Any]:
         logs.append("ℹ️ Semantic Pruning: 比較対象なし — スキップ")
         return {"contradictions": [], "logs": logs, "current_step": "compare_text"}
 
+    # Load past reviewer feedback for AI learning
+    feedback_context = ""
+    try:
+        from services.firestore_service import get_recent_feedback
+        feedback_entries = get_recent_feedback(limit=20)
+        if feedback_entries:
+            lines = []
+            for fb in feedback_entries:
+                decision_jp = "承認" if fb.get("decision") == "approved" else "却下"
+                reason = fb.get("reason", "")
+                category = fb.get("issue_category", "不明")
+                detail = fb.get("issue_detail", "")
+                if reason:
+                    lines.append(f"- カテゴリ「{category}」: レビュアーが「{reason}」として{decision_jp}（元の指摘: {detail[:80]}）")
+                else:
+                    lines.append(f"- カテゴリ「{category}」の指摘を{decision_jp}（元の指摘: {detail[:80]}）")
+            feedback_context = "\n".join(lines)
+            logs.append(f"🧠 AI学習: {len(feedback_entries)} 件の過去フィードバックを参照")
+    except Exception as e:
+        logger.warning("Feedback loading failed: %s", e)
+        logs.append("⚠️ フィードバック読み込みスキップ（Firestore未接続）")
+
     logs.append(f"✂️ Semantic Pruning: 意味的矛盾を検出中... (Gemini 1.5 Pro / 2M Context)")
 
     for doc in related_docs:
@@ -99,7 +124,7 @@ def compare_text_node(state: AgentState) -> dict[str, Any]:
 
         try:
             from services.vertex_ai_service import compare_text
-            result = compare_text(source_text, doc.get("snippet", ""))
+            result = compare_text(source_text, doc.get("snippet", ""), feedback_context=feedback_context)
             contradictions.append(
                 {
                     "doc_title": doc_title,
@@ -125,7 +150,7 @@ def compare_text_node(state: AgentState) -> dict[str, Any]:
             logs.append(f"   ⚠️ Gemini APIエラー（フォールバック結果を使用）")
 
     logs.append(f"✅ Pruning完了: {len(contradictions)} 件の矛盾を剪定")
-    return {"contradictions": contradictions, "logs": logs, "current_step": "compare_text"}
+    return {"contradictions": contradictions, "logs": logs, "current_step": "compare_text", "feedback_context": feedback_context}
 
 
 # ---------------------------------------------------------------------------

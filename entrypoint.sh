@@ -1,10 +1,10 @@
 #!/bin/bash
-# DocuGardener Agent — Entrypoint
+# DocuAlign AI — Entrypoint
 # Runs Streamlit dashboard on port $PORT (default 8080)
 
 set -e
 
-echo "DocuGardener Agent starting..."
+echo "DocuAlign AI starting..."
 echo "   Dashboard: port ${PORT:-8080}"
 
 # Start Streamlit in foreground

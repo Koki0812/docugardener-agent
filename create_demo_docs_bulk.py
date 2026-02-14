@@ -1,5 +1,5 @@
 """
-Generate demo .docx documents for DocuGardener Agent demonstration.
+Generate demo .docx documents for DocuAlign AI demonstration.
 Creates 10 diverse documents with intentional contradictions for testing.
 
 Run: python create_demo_docs_bulk.py

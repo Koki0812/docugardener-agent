@@ -28,16 +28,31 @@ def _get_model() -> GenerativeModel:
 # Text comparison
 # ---------------------------------------------------------------------------
 
-def compare_text(new_doc_text: str, old_doc_text: str) -> dict[str, Any]:
+def compare_text(new_doc_text: str, old_doc_text: str, feedback_context: str = "") -> dict[str, Any]:
     """Use Gemini to find semantic contradictions between *new_doc_text* and *old_doc_text*.
+
+    Args:
+        new_doc_text: Text of the newer document.
+        old_doc_text: Text of the older document.
+        feedback_context: Optional past reviewer feedback to improve accuracy.
 
     Returns a dict with keys ``contradictions`` (list) and ``summary``.
     """
     model = _get_model()
+
+    feedback_section = ""
+    if feedback_context:
+        feedback_section = f"""
+【過去のレビューフィードバック（参考情報）】
+以下は過去のレビュアーの判断です。同様のパターンを参考にしてください：
+{feedback_context}
+
+"""
+
     prompt = f"""あなたはドキュメント品質管理の専門家です。
 以下の「新しいドキュメント」と「古いドキュメント」を比較し、
 意味的な矛盾や不整合を全て特定してください。
-
+{feedback_section}
 各矛盾について以下の形式で出力してください:
 - 矛盾の種類（事実の相違 / 手順の変更 / 用語の不一致 / その他）
 - 古いドキュメントの該当箇所（引用）

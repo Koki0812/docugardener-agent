@@ -1,8 +1,8 @@
-# DocuGardener Agent — Cloud Run deployment script (PowerShell)
+# DocuAlign AI — Cloud Run deployment script (PowerShell)
 # Usage: .\deploy.ps1 -ProjectId "YOUR_PROJECT_ID" [-Region "us-central1"]
 
 param(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     [string]$ProjectId,
 
     [string]$Region = "us-central1"
@@ -13,7 +13,7 @@ $ServiceName = "docugardener-agent"
 $ImageName = "gcr.io/$ProjectId/$ServiceName"
 
 Write-Host ""
-Write-Host "🌿 DocuGardener Agent — Deploying to Cloud Run" -ForegroundColor Green
+Write-Host "🛡️ DocuAlign AI — Deploying to Cloud Run" -ForegroundColor Green
 Write-Host "   Project:  $ProjectId"
 Write-Host "   Region:   $Region"
 Write-Host "   Service:  $ServiceName"
@@ -64,6 +64,6 @@ $ServiceUrl = gcloud run services describe $ServiceName `
 
 Write-Host ""
 Write-Host "✅ Deployment complete!" -ForegroundColor Green
-Write-Host "🌿 DocuGardener Agent is live at:" -ForegroundColor Green
+Write-Host "🛡️ DocuAlign AI is live at:" -ForegroundColor Green
 Write-Host "   $ServiceUrl" -ForegroundColor Yellow
 Write-Host ""

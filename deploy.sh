@@ -1,5 +1,5 @@
 #!/bin/bash
-# DocuGardener Agent — Cloud Run deployment script
+# DocuAlign AI — Cloud Run deployment script
 # Usage: bash deploy.sh <PROJECT_ID> [REGION]
 
 set -euo pipefail
@@ -9,7 +9,7 @@ REGION="${2:-us-central1}"
 SERVICE_NAME="docugardener-agent"
 IMAGE_NAME="gcr.io/${PROJECT_ID}/${SERVICE_NAME}"
 
-echo "🌿 DocuGardener Agent — Deploying to Cloud Run"
+echo "🛡️ DocuAlign AI — Deploying to Cloud Run"
 echo "   Project:  ${PROJECT_ID}"
 echo "   Region:   ${REGION}"
 echo "   Service:  ${SERVICE_NAME}"
@@ -57,6 +57,6 @@ SERVICE_URL=$(gcloud run services describe "${SERVICE_NAME}" \
 
 echo ""
 echo "✅ Deployment complete!"
-echo "🌿 DocuGardener Agent is live at:"
+echo "🛡️ DocuAlign AI is live at:"
 echo "   ${SERVICE_URL}"
 echo ""

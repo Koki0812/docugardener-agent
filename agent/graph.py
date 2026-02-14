@@ -1,4 +1,4 @@
-"""DocuGardener Agent — LangGraph StateGraph definition."""
+"""DocuAlign AI — LangGraph StateGraph definition."""
 from __future__ import annotations
 
 from langgraph.graph import StateGraph, END
@@ -14,7 +14,7 @@ from agent.nodes import (
 
 
 def build_graph() -> StateGraph:
-    """Build and compile the DocuGardener LangGraph pipeline.
+    """Build and compile the DocuAlign AI LangGraph pipeline.
 
     Pipeline:
         fetch_source → search_related → compare_text → compare_images → suggest → END

@@ -1,4 +1,4 @@
-"""Centralized configuration for DocuGardener Agent."""
+"""Centralized configuration for DocuAlign AI."""
 import os
 
 

@@ -1,5 +1,5 @@
 """
-Generate demo .docx documents for DocuGardener Agent demonstration.
+Generate demo .docx documents for DocuAlign AI demonstration.
 Creates:
   1. Old manual (v2.1) with outdated screenshots and instructions
   2. New release notes (v3.0) with updated information

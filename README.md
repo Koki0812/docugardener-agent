@@ -1,8 +1,8 @@
-# 🌿 DocuGardener Agent
+# 🛡️ DocuAlign AI
 
-> 検索されるのを待たない。自ら動き、知識の森を「剪定」する自律型庭師AI。
+> ドキュメントの矛盾・劣化を自動検知し、常に最新・正確な状態に保つ自律型管理エージェント
 
-**Google Cloud Japan AI Hackathon Vol.4 出展作品**
+**第4回 Agentic AI Hackathon with Google Cloud 出展作品**
 
 ## 🎯 プロジェクト概要
 
@@ -10,7 +10,7 @@
 企業のマニュアル・手順書は、システム更新のたびに内容が陳腐化します。しかし、数百ページに及ぶドキュメント群から矛盾箇所を人手で探すのは非現実的です。
 
 ### ソリューション
-DocuGardener Agent は、ドキュメント更新をトリガーに **自律的に** 古い資料との矛盾を検出し、修正提案まで行う **Agentic AI** です。
+DocuAlign AI は、ドキュメント更新をトリガーに **自律的に** 古い資料との矛盾を検出し、修正提案まで行う **Agentic AI** です。
 
 ### コア機能
 
@@ -23,7 +23,7 @@ DocuGardener Agent は、ドキュメント更新をトリガーに **自律的�
 ## 🏗️ アーキテクチャ
 
 ```
-Google Drive (Trigger)
+GCS Bucket (Eventarc Trigger)
        │
        ▼
 ┌─────────────┐
@@ -55,6 +55,8 @@ Google Drive (Trigger)
 | **Agent Logic** | LangGraph (Python) |
 | **AI Model** | Vertex AI Gemini 1.5 Pro |
 | **Search / RAG** | Vertex AI Agent Builder |
+| **イベント駆動** | Eventarc + GCS |
+| **データストア** | Cloud Firestore |
 | **API連携** | Google Drive API, Google Docs API |
 | **実行環境** | Google Cloud Run |
 | **言語** | Python 3.11 |
@@ -62,18 +64,22 @@ Google Drive (Trigger)
 ## 📁 プロジェクト構造
 
 ```
-├── app.py                  # Streamlit ダッシュボード
+├── app.py                  # Streamlit ダッシュボード (マルチビュー)
+├── webhook.py              # Eventarc Webhook (Flask)
+├── entrypoint.sh           # Streamlit + Webhook 起動
 ├── Dockerfile              # Cloud Run コンテナ
 ├── requirements.txt        # 依存パッケージ
-├── deploy.sh               # デプロイスクリプト (bash)
-├── deploy.ps1              # デプロイスクリプト (PowerShell)
 ├── config/
 │   └── settings.py         # 環境変数ベースの設定
 ├── services/
 │   ├── drive_service.py    # Google Drive API
 │   ├── docs_service.py     # Google Docs API
 │   ├── vertex_ai_service.py# Gemini (テキスト + マルチモーダル)
-│   └── search_service.py   # Agent Builder 検索
+│   ├── search_service.py   # Agent Builder 検索
+│   └── firestore_service.py# Cloud Firestore
+├── views/
+│   ├── admin_view.py       # 管理者ダッシュボード
+│   └── user_view.py        # エンドユーザー ドライブ
 └── agent/
     ├── state.py            # LangGraph AgentState
     ├── nodes.py            # パイプラインノード

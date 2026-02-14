@@ -1,8 +1,8 @@
 """
-DocuGardener Agent — Eventarc Webhook Receiver
-===============================================
+DocuAlign AI — Eventarc Webhook Receiver
+========================================
 Flask server that receives GCS upload events via Eventarc
-and triggers the DocuGardener Agent pipeline automatically.
+and triggers the DocuAlign AI agent pipeline automatically.
 
 Runs alongside Streamlit on port 8081.
 """
@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from flask import Flask, request, jsonify
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("docugardener.webhook")
+logger = logging.getLogger("docualign.webhook")
 
 app = Flask(__name__)
 
@@ -105,7 +105,7 @@ def handle_gcs_event():
 @app.route("/health", methods=["GET"])
 def health():
     """Health check endpoint."""
-    return jsonify({"status": "ok", "service": "docugardener-webhook"}), 200
+    return jsonify({"status": "ok", "service": "docualign-webhook"}), 200
 
 
 def _run_pipeline(bucket: str, file_name: str, scan_id: str) -> dict:
@@ -172,5 +172,5 @@ def _run_pipeline(bucket: str, file_name: str, scan_id: str) -> dict:
 
 if __name__ == "__main__":
     port = int(os.environ.get("WEBHOOK_PORT", "8081"))
-    logger.info(f"🌿 DocuGardener Webhook starting on port {port}")
+    logger.info(f"🛡️ DocuAlign AI Webhook starting on port {port}")
     app.run(host="0.0.0.0", port=port, debug=False)
